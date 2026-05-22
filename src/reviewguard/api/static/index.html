@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ReviewGuard</title>
+    <style>
+      :root {
+        --bg: linear-gradient(135deg, #fffaf1 0%, #eef6ff 100%);
+        --panel: rgba(255, 255, 255, 0.86);
+        --line: #d6deea;
+        --text: #1f2937;
+        --muted: #5f6b7a;
+        --accent: #0f766e;
+        --accent-2: #d97706;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Iowan Old Style", "Palatino Linotype", serif;
+        color: var(--text);
+        background: var(--bg);
+        min-height: 100vh;
+      }
+
+      .shell {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+
+      .hero {
+        margin-bottom: 28px;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(2.2rem, 4vw, 4rem);
+        line-height: 0.95;
+        letter-spacing: -0.04em;
+      }
+
+      .lead {
+        max-width: 680px;
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.6;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 24px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 18px 50px rgba(31, 41, 55, 0.08);
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 180px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        padding: 18px;
+        font: inherit;
+        font-size: 1rem;
+        resize: vertical;
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      button {
+        margin-top: 16px;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 20px;
+        font: inherit;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        cursor: pointer;
+      }
+
+      .status, .results {
+        margin-top: 18px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.75);
+      }
+
+      .results {
+        display: none;
+      }
+
+      .metric {
+        margin: 10px 0;
+        font-size: 1rem;
+      }
+
+      @media (max-width: 640px) {
+        .shell { padding-top: 28px; }
+        .card { padding: 18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p>Dissertation MVP</p>
+        <h1>ReviewGuard</h1>
+        <p class="lead">
+          Multitask review analysis for e-commerce: one Transformer, two outputs,
+          sentiment and authenticity.
+        </p>
+      </section>
+
+      <section class="card">
+        <label for="review">Review text</label>
+        <textarea id="review" placeholder="Paste a customer review here..."></textarea>
+        <button id="analyze">Analyze review</button>
+        <div class="status" id="status">
+          The interface is connected to the API scaffold. Predictions will work after the first trained checkpoint is exported.
+        </div>
+        <div class="results" id="results"></div>
+      </section>
+    </main>
+
+    <script>
+      const button = document.getElementById("analyze");
+      const status = document.getElementById("status");
+      const results = document.getElementById("results");
+      const textarea = document.getElementById("review");
+
+      button.addEventListener("click", async () => {
+        const text = textarea.value.trim();
+        if (text.length < 3) {
+          status.textContent = "Please enter a longer review.";
+          results.style.display = "none";
+          return;
+        }
+
+        status.textContent = "Sending review to API...";
+        results.style.display = "none";
+
+        try {
+          const response = await fetch("/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          });
+
+          const payload = await response.json();
+          if (!response.ok) {
+            status.textContent = payload.detail || "Analysis failed.";
+            return;
+          }
+
+          status.textContent = "Analysis complete.";
+          results.innerHTML = `
+            <div class="metric"><strong>Sentiment:</strong> ${payload.sentiment_label} (${payload.sentiment_confidence.toFixed(3)})</div>
+            <div class="metric"><strong>Authenticity:</strong> ${payload.authenticity_label} (${payload.authenticity_confidence.toFixed(3)})</div>
+            <div class="metric"><strong>Model:</strong> ${payload.model_name}</div>
+          `;
+          results.style.display = "block";
+        } catch (error) {
+          status.textContent = "API is not running or not reachable yet.";
+        }
+      });
+    </script>
+  </body>
+</html>

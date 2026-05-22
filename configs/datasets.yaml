@@ -1,0 +1,31 @@
+sentiment:
+  primary:
+    name: rureviews
+    source: https://github.com/sismetanin/rureviews
+    label_strategy: direct_3class_labels
+  secondary:
+    - name: perekrestok_reviews
+      source: https://huggingface.co/datasets/lapki/perekrestok-reviews
+      label_strategy: derive_3class_sentiment_from_rating
+    - name: kazsandra
+      source: https://github.com/IS2AI/KazSAnDRA
+      label_strategy: polarity_or_score_mapping
+    - name: amazon_reviews_2023
+      source: https://amazon-reviews-2023.github.io/main.html
+      label_strategy: derive_3class_sentiment_from_rating
+
+authenticity:
+  primary:
+    name: fraud_yelp_dataset
+    source: https://www.dgl.ai/dgl_docs/generated/dgl.data.FraudDataset.html
+    label_strategy: benchmark_binary_fraud_labels
+  secondary:
+    - name: opspam
+      source: https://myleott.com/op-spam.html
+      label_strategy: direct_binary_labels
+    - name: maide_up
+      source: https://huggingface.co/datasets/MichiganNLP/MAiDE-up
+      label_strategy: authentic_vs_ai_generated
+    - name: fraud_amazon_dataset
+      source: https://www.dgl.ai/dgl_docs/generated/dgl.data.FraudDataset.html
+      label_strategy: reviewer_fraud_proxy_labels

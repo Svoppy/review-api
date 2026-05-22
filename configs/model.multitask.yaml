@@ -1,0 +1,14 @@
+model_name: FacebookAI/xlm-roberta-base
+max_length: 256
+dropout: 0.1
+sentiment_labels:
+  - negative
+  - neutral
+  - positive
+authenticity_labels:
+  - authentic
+  - fake
+loss_weights:
+  sentiment: 1.0
+  authenticity: 1.0
+
