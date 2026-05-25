@@ -21,6 +21,7 @@ def health() -> dict[str, object]:
         "status": "ok",
         "model_ready": analyzer.is_ready(),
         "model_name": settings.model_name,
+        "checkpoint_dir": str(analyzer.checkpoint_dir),
     }
 
 
@@ -37,4 +38,3 @@ def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     return AnalyzeResponse(**result)
-

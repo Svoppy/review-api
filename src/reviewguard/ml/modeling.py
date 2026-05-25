@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 import torch
 from torch import nn
@@ -36,6 +38,7 @@ class MultiTaskTransformer(nn.Module):
         self.authenticity_head = nn.Linear(hidden_size, authenticity_num_labels)
         self.sentiment_loss_weight = sentiment_loss_weight
         self.authenticity_loss_weight = authenticity_loss_weight
+        self.encoder_model_name = model_name
 
     def _pool(self, last_hidden_state: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
         # Mean pooling is more stable across encoder families than relying on CLS conventions.
@@ -78,3 +81,44 @@ class MultiTaskTransformer(nn.Module):
             authenticity_logits=authenticity_logits,
             loss=loss,
         )
+
+    def export_checkpoint(
+        self,
+        checkpoint_dir: str | Path,
+        *,
+        tokenizer,
+        sentiment_labels: list[str],
+        authenticity_labels: list[str],
+        max_length: int,
+    ) -> None:
+        checkpoint_path = Path(checkpoint_dir)
+        checkpoint_path.mkdir(parents=True, exist_ok=True)
+
+        encoder_dir = checkpoint_path / "encoder"
+        self.encoder.save_pretrained(encoder_dir)
+        tokenizer.save_pretrained(checkpoint_path)
+        torch.save(self.state_dict(), checkpoint_path / "model.pt")
+
+        metadata = {
+            "encoder_model_name": self.encoder_model_name,
+            "encoder_dir": "encoder",
+            "sentiment_labels": sentiment_labels,
+            "authenticity_labels": authenticity_labels,
+            "max_length": max_length,
+        }
+        (checkpoint_path / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+    @classmethod
+    def from_exported_checkpoint(cls, checkpoint_dir: str | Path) -> tuple[MultiTaskTransformer, dict]:
+        checkpoint_path = Path(checkpoint_dir)
+        metadata = json.loads((checkpoint_path / "metadata.json").read_text())
+        encoder_dir = checkpoint_path / metadata.get("encoder_dir", "encoder")
+
+        model = cls(
+            model_name=str(encoder_dir),
+            sentiment_num_labels=len(metadata["sentiment_labels"]),
+            authenticity_num_labels=len(metadata["authenticity_labels"]),
+        )
+        state_dict = torch.load(checkpoint_path / "model.pt", map_location="cpu")
+        model.load_state_dict(state_dict)
+        return model, metadata

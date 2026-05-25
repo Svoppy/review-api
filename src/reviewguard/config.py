@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     model_name: str = "FacebookAI/xlm-roberta-base"
     checkpoint_dir: Path = Path("models/latest")
     max_length: int = 256
+    device: str = "cpu"
 
 
 settings = Settings()
-

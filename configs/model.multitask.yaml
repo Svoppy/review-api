@@ -11,4 +11,11 @@ authenticity_labels:
 loss_weights:
   sentiment: 1.0
   authenticity: 1.0
-
+train:
+  batch_size: 8
+  learning_rate: 2.0e-5
+  weight_decay: 0.01
+  epochs: 1
+  random_state: 42
+  output_dir: models/experiments/multitask
+  export_dir: models/latest
