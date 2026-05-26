@@ -1,5 +1,5 @@
-model_name: FacebookAI/xlm-roberta-base
-max_length: 256
+model_name: distilbert-base-multilingual-cased
+max_length: 128
 dropout: 0.1
 sentiment_labels:
   - negative
@@ -18,8 +18,8 @@ train:
   epochs: 1
   random_state: 42
   device: cpu
-  output_dir: models/experiments/multitask
-  export_dir: models/latest
+  output_dir: models/experiments/pilot-multitask
+  export_dir: models/pilot-latest
 single_task:
   train:
     batch_size: 8
@@ -34,9 +34,9 @@ single_task:
         - negative
         - neutral
         - positive
-      export_dir: models/experiments/single-task-sentiment
+      export_dir: models/experiments/pilot-single-task-sentiment
     authenticity:
       labels:
         - authentic
         - fake
-      export_dir: models/experiments/single-task-authenticity
+      export_dir: models/experiments/pilot-single-task-authenticity

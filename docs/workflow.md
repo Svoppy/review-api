@@ -6,9 +6,9 @@ The intended project workflow is:
 
 1. place raw real datasets into `data/raw/...`
 2. normalize them into one shared multitask schema
-3. train baselines and the multitask model
+3. train baselines, single-task Transformers, and the multitask model
 4. export the chosen checkpoint
-5. run the API and web UI against that checkpoint
+5. run the API and web UI against a multitask checkpoint
 
 ## Unified schema
 
@@ -42,6 +42,15 @@ Supported adapters:
 - `perekrestok`
 - `opspam`
 - `maide_up`
+
+To build a shared multitask corpus from several processed files:
+
+```bash
+PYTHONPATH=src python3.14 -m reviewguard.data merge \
+  --inputs data/processed/rureviews.jsonl data/processed/opspam.jsonl data/processed/maide_up.jsonl \
+  --output data/processed/joint_reviews.jsonl \
+  --format jsonl
+```
 
 ## Baseline training
 
@@ -79,6 +88,36 @@ What it does:
 - evaluates on validation and test splits
 - exports a checkpoint consumable by the API
 
+## Single-task Transformer training
+
+CLI:
+
+```bash
+PYTHONPATH=src python3.14 -m reviewguard.training single-task \
+  --input data/processed/joint_reviews.jsonl \
+  --export-dir models/single-task-sentiment \
+  --task sentiment \
+  --config configs/model.multitask.yaml
+```
+
+```bash
+PYTHONPATH=src python3.14 -m reviewguard.training single-task \
+  --input data/processed/joint_reviews.jsonl \
+  --export-dir models/single-task-authenticity \
+  --task authenticity \
+  --config configs/model.multitask.yaml
+```
+
+What it does:
+
+- loads unified records and keeps the shared `train/valid/test` split logic
+- filters each split to the requested task's labeled examples for fitting and scoring
+- trains one Hugging Face sequence-classification model per task run
+- writes a task-specific export with Hugging Face model files, `metadata.json`, `manifest.json`, and `train_report.json`
+
+This is the clean comparison point for the dissertation before joint multitask training.
+Single-task exports are not API-ready inference bundles for `/analyze`; the current service expects the multitask export format with `model.pt`.
+
 ## Export format
 
 Multitask export directory:
@@ -107,6 +146,8 @@ Health endpoint:
 Prediction endpoint:
 
 - `POST /analyze`
+
+The response now includes an `explanation` object with ranked task probabilities, token count, truncation status, and transparent notes.
 
 ## Recommended experiment order
 

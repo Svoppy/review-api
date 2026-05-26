@@ -70,7 +70,7 @@ def _task_truth_and_predictions(
     *,
     task: str,
 ) -> tuple[list[str], list[str]]:
-    label_field = LABEL_FIELDS[task]
+    label_field = label_field_for_task(task)
     if len(records) != len(predictions):
         raise ValueError(f"{task} predictions must align one-to-one with records.")
 
@@ -88,6 +88,32 @@ def _task_truth_and_predictions(
     return y_true, y_pred
 
 
+def label_field_for_task(task: str) -> str:
+    try:
+        return LABEL_FIELDS[task]
+    except KeyError as error:
+        raise ValueError(f"Unsupported task: {task}") from error
+
+
+def compute_task_metrics(
+    records: list[dict[str, Any]],
+    *,
+    predictions: list[str | None],
+    task: str,
+    labels: list[str],
+) -> dict[str, dict[str, Any]]:
+    y_true, y_pred = _task_truth_and_predictions(records, predictions, task=task)
+    if not y_true:
+        return {}
+    return {
+        task: compute_classification_metrics(
+            y_true,
+            y_pred,
+            labels=labels,
+        ).to_dict()
+    }
+
+
 def compute_multitask_metrics(
     records: list[dict[str, Any]],
     *,
@@ -99,29 +125,23 @@ def compute_multitask_metrics(
     metrics: dict[str, dict[str, Any]] = {}
 
     if sentiment_predictions is not None:
-        y_true, y_pred = _task_truth_and_predictions(
-            records,
-            sentiment_predictions,
-            task="sentiment",
-        )
-        if y_true:
-            metrics["sentiment"] = compute_classification_metrics(
-                y_true,
-                y_pred,
+        metrics.update(
+            compute_task_metrics(
+                records,
+                predictions=sentiment_predictions,
+                task="sentiment",
                 labels=sentiment_labels,
-            ).to_dict()
+            )
+        )
 
     if authenticity_predictions is not None:
-        y_true, y_pred = _task_truth_and_predictions(
-            records,
-            authenticity_predictions,
-            task="authenticity",
-        )
-        if y_true:
-            metrics["authenticity"] = compute_classification_metrics(
-                y_true,
-                y_pred,
+        metrics.update(
+            compute_task_metrics(
+                records,
+                predictions=authenticity_predictions,
+                task="authenticity",
                 labels=authenticity_labels,
-            ).to_dict()
+            )
+        )
 
     return metrics
