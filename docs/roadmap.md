@@ -27,9 +27,10 @@
 - connect trained checkpoint to API
 - expose probabilities and explanations
 - test end-to-end through the web UI
-- status: checkpoint loading and inference wiring implemented, explanation layer still pending
+- status: checkpoint loading, inference wiring, and lightweight probability/explanation layer implemented; end-to-end validation with a trained checkpoint is still pending
 
 ## Phase 5
 
 - prepare dissertation figures
 - write methodology and results chapters
+- perform ablation, error analysis, and reproducibility packaging for the defense build

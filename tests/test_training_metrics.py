@@ -279,3 +279,41 @@ def test_single_task_trainer_seeds_before_model_initialization(monkeypatch) -> N
     assert trainer.task == "sentiment"
     assert events[0] == ("manual_seed", 17)
     assert events[1] == ("model_init", trainer.config.model_name)
+
+
+@pytest.mark.skipif(
+    importlib.util.find_spec("torch") is None or importlib.util.find_spec("transformers") is None,
+    reason="optional training dependencies are not installed",
+)
+def test_multitask_trainer_seeds_before_model_initialization(monkeypatch) -> None:
+    import reviewguard.training.multitask as multitask
+
+    events: list[tuple[str, object]] = []
+
+    def fake_manual_seed(seed: int) -> None:
+        events.append(("manual_seed", seed))
+
+    monkeypatch.setattr(multitask.torch, "manual_seed", fake_manual_seed)
+    monkeypatch.setattr(multitask.torch.cuda, "is_available", lambda: False)
+    monkeypatch.setattr(
+        multitask.AutoTokenizer,
+        "from_pretrained",
+        lambda model_name: object(),
+    )
+
+    class DummyModel:
+        def to(self, device):
+            events.append(("model_to", str(device)))
+
+    monkeypatch.setattr(
+        multitask,
+        "MultiTaskTransformer",
+        lambda **kwargs: DummyModel(),
+    )
+
+    trainer = multitask.MultitaskTrainingScaffold(
+        multitask.MultitaskTrainingConfig(random_state=19)
+    )
+
+    assert trainer.config.random_state == 19
+    assert events[0] == ("manual_seed", 19)

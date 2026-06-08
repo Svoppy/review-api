@@ -16,7 +16,7 @@
 
 ## Baseline metrics
 
-Source: [models/pilot1k-baseline/train_report.json](/Users/diaskazikhanov/Desktop/aitu/nirm/models/pilot1k-baseline/train_report.json)
+Source artifact: `models/pilot1k-baseline/train_report.json` if preserved separately during local experimentation. The artifact is not committed in the current repository snapshot.
 
 ### Test split
 
@@ -35,3 +35,11 @@ Source: [models/pilot1k-baseline/train_report.json](/Users/diaskazikhanov/Deskto
 ## Current blocker
 
 The next step is the `single-task Transformer` and `multitask Transformer` comparison on the same pilot protocol. The local Python 3.14 environment is ready and the public datasets are already downloaded, but the first escalated Hugging Face model-download/training step was blocked by the platform usage limit rather than by repository code.
+
+## Dissertation note
+
+These pilot metrics are only a preliminary sanity check for the baseline pipeline on a small sampled corpus. They should not be presented as final dissertation results. The final manuscript should clearly separate:
+
+- pilot validation on sampled data;
+- full benchmark experiments on the complete corpora;
+- comparative results for `baseline`, `single-task Transformer`, and `multitask Transformer`.

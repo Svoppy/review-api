@@ -7,6 +7,7 @@ import pytest
 from reviewguard.data import (
     load_maide_up,
     merge_unified_datasets,
+    build_dataset_audit_report,
     load_opspam,
     load_perekrestok_ratings,
     load_rureviews,
@@ -458,6 +459,149 @@ def test_data_cli_no_args_prints_top_level_help(capsys) -> None:
     assert exit_code == 0
     assert "normalize" in captured.out
     assert "merge" in captured.out
+
+
+def test_build_dataset_audit_report_computes_majority_baseline_and_overlap() -> None:
+    train_records = [
+        {
+            "record_id": "1",
+            "text": "Excellent product",
+            "source": "demo",
+            "language": "en",
+            "domain": "ecommerce",
+            "sentiment_label": "positive",
+            "authenticity_label": "authentic",
+        },
+        {
+            "record_id": "2",
+            "text": "Very good",
+            "source": "demo",
+            "language": "en",
+            "domain": "ecommerce",
+            "sentiment_label": "positive",
+            "authenticity_label": "authentic",
+        },
+        {
+            "record_id": "3",
+            "text": "Bad quality",
+            "source": "demo",
+            "language": "en",
+            "domain": "ecommerce",
+            "sentiment_label": "negative",
+            "authenticity_label": "fake",
+        },
+    ]
+    valid_records = [
+        {
+            "record_id": "4",
+            "text": "Excellent product",
+            "source": "demo",
+            "language": "en",
+            "domain": "ecommerce",
+            "sentiment_label": "positive",
+            "authenticity_label": "authentic",
+        }
+    ]
+    test_records = [
+        {
+            "record_id": "2",
+            "text": "Different text but same id is enough for overlap counting",
+            "source": "demo",
+            "language": "en",
+            "domain": "ecommerce",
+            "sentiment_label": "positive",
+            "authenticity_label": "fake",
+        }
+    ]
+    split = {"train": train_records, "valid": valid_records, "test": test_records}
+    records = train_records + valid_records + test_records
+
+    report = build_dataset_audit_report(records, split, input_path=None, random_state=42)
+
+    assert report["records"] == 5
+    assert report["split_sizes"] == {"train": 3, "valid": 1, "test": 1}
+    assert report["split_overlap"]["train_vs_valid"]["exact_text_overlap"] == 1
+    assert report["split_overlap"]["train_vs_test"]["record_id_overlap"] == 1
+    assert report["tasks"]["sentiment"]["train_distribution"]["majority_label"] == "positive"
+    assert report["tasks"]["sentiment"]["majority_baseline"]["validation"]["accuracy"] == 1.0
+    assert report["tasks"]["authenticity"]["majority_baseline"]["test"]["majority_label"] == "authentic"
+
+
+def test_cli_entrypoint_supports_audit_command(tmp_path: Path) -> None:
+    input_path = tmp_path / "joint.jsonl"
+    output_path = tmp_path / "audit.json"
+    input_path.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "record_id": "1",
+                        "source": "rureviews",
+                        "language": "ru",
+                        "domain": "ecommerce",
+                        "text": "Отлично",
+                        "sentiment_label": "positive",
+                        "authenticity_label": None,
+                        "metadata": {},
+                    },
+                    ensure_ascii=False,
+                ),
+                json.dumps(
+                    {
+                        "record_id": "2",
+                        "source": "maide_up",
+                        "language": "en",
+                        "domain": "hospitality",
+                        "text": "Looks generated",
+                        "sentiment_label": "neutral",
+                        "authenticity_label": "fake",
+                        "metadata": {},
+                    },
+                    ensure_ascii=False,
+                ),
+                json.dumps(
+                    {
+                        "record_id": "3",
+                        "source": "maide_up",
+                        "language": "en",
+                        "domain": "hospitality",
+                        "text": "Totally fine",
+                        "sentiment_label": "positive",
+                        "authenticity_label": "authentic",
+                        "metadata": {},
+                    },
+                    ensure_ascii=False,
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        [
+            "audit",
+            "--input",
+            str(input_path),
+            "--output",
+            str(output_path),
+            "--train-size",
+            "0.34",
+            "--valid-size",
+            "0.33",
+            "--test-size",
+            "0.33",
+            "--random-state",
+            "7",
+        ]
+    )
+
+    report = json.loads(output_path.read_text(encoding="utf-8"))
+    assert exit_code == 0
+    assert report["random_state"] == 7
+    assert report["records"] == 3
+    assert report["input_path"] == str(input_path)
+    assert report["tasks"]["sentiment"]["train_distribution"]["labeled_records"] >= 0
 
 
 def test_data_cli_help_keeps_top_level_commands(capsys) -> None:

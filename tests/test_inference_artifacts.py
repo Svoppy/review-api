@@ -21,6 +21,8 @@ def test_analyzer_readiness_requires_export_files(tmp_path: Path) -> None:
 
     (tmp_path / "metadata.json").write_text(json.dumps({"encoder_model_name": "demo"}))
     (tmp_path / "model.pt").write_text("stub")
+    (tmp_path / "encoder").mkdir()
+    (tmp_path / "tokenizer_config.json").write_text("{}")
     assert analyzer.is_ready() is True
 
 

@@ -1,0 +1,10 @@
+{"record_id": "1", "source": "rureviews", "language": "ru", "domain": "ecommerce", "text": "review 0", "sentiment_label": "positive", "authenticity_label": null, "metadata": {}}
+{"record_id": "2", "source": "maide_up", "language": "en", "domain": "ecommerce", "text": "review 1", "sentiment_label": "neutral", "authenticity_label": "fake", "metadata": {}}
+{"record_id": "3", "source": "rureviews", "language": "ru", "domain": "ecommerce", "text": "review 2", "sentiment_label": "negative", "authenticity_label": null, "metadata": {}}
+{"record_id": "4", "source": "maide_up", "language": "en", "domain": "ecommerce", "text": "review 3", "sentiment_label": "positive", "authenticity_label": "authentic", "metadata": {}}
+{"record_id": "5", "source": "rureviews", "language": "ru", "domain": "ecommerce", "text": "review 4", "sentiment_label": "neutral", "authenticity_label": null, "metadata": {}}
+{"record_id": "6", "source": "maide_up", "language": "en", "domain": "ecommerce", "text": "review 5", "sentiment_label": "negative", "authenticity_label": "fake", "metadata": {}}
+{"record_id": "7", "source": "rureviews", "language": "ru", "domain": "ecommerce", "text": "review 6", "sentiment_label": "positive", "authenticity_label": null, "metadata": {}}
+{"record_id": "8", "source": "maide_up", "language": "en", "domain": "ecommerce", "text": "review 7", "sentiment_label": "neutral", "authenticity_label": "authentic", "metadata": {}}
+{"record_id": "9", "source": "rureviews", "language": "ru", "domain": "ecommerce", "text": "review 8", "sentiment_label": "negative", "authenticity_label": null, "metadata": {}}
+{"record_id": "10", "source": "maide_up", "language": "en", "domain": "ecommerce", "text": "review 9", "sentiment_label": "positive", "authenticity_label": "fake", "metadata": {}}

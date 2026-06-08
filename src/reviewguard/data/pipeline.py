@@ -626,6 +626,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Keep records even if both task labels are missing.",
     )
+
+    audit = subparsers.add_parser(
+        "audit",
+        help="Create a split-level audit report with class balance, majority baseline, and overlap checks.",
+    )
+    audit.add_argument("--input", required=True, dest="input_path")
+    audit.add_argument("--output", required=True, dest="output_path")
+    audit.add_argument("--train-size", type=float, default=0.8)
+    audit.add_argument("--valid-size", type=float, default=0.1)
+    audit.add_argument("--test-size", type=float, default=0.1)
+    audit.add_argument("--random-state", type=int, default=42)
     return parser
 
 
@@ -637,7 +648,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 0
 
-    if argv[0] not in {"normalize", "merge"} and argv[0].startswith("-") and argv[0] not in {"-h", "--help"}:
+    if argv[0] not in {"normalize", "merge", "audit"} and argv[0].startswith("-") and argv[0] not in {"-h", "--help"}:
         argv = ["normalize", *argv]
 
     parser = build_arg_parser()
@@ -662,6 +673,27 @@ def main(argv: list[str] | None = None) -> int:
             write_csv(args.output_path, [_build_record(**record) for record in records])
         else:
             write_jsonl(args.output_path, [_build_record(**record) for record in records])
+        return 0
+
+    if command == "audit":
+        from reviewguard.data.audit import build_dataset_audit_report, write_audit_report
+        from reviewguard.training.splits import split_unified_records
+
+        records = load_unified_records(args.input_path)
+        split = split_unified_records(
+            records,
+            train_size=args.train_size,
+            valid_size=args.valid_size,
+            test_size=args.test_size,
+            random_state=args.random_state,
+        )
+        report = build_dataset_audit_report(
+            records,
+            split,
+            input_path=args.input_path,
+            random_state=args.random_state,
+        )
+        write_audit_report(args.output_path, report)
         return 0
 
     parser.print_help()

@@ -2,6 +2,8 @@
 
 Verified on `2026-05-21`.
 
+Repository status note: the dataset recommendations below describe the intended dissertation stack. The current repository snapshot contains first-class normalization adapters only for `RuReviews`, `Perekrestok Reviews`, `OpSpam`, and `MAiDE-up`. Other datasets listed here should be treated as planned or optional extensions until dedicated loaders are implemented.
+
 ## Recommendation summary
 
 There is no perfect modern public dataset that jointly labels both e-commerce sentiment and review authenticity at scale. The most defensible dissertation path is:

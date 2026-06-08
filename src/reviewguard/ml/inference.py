@@ -59,6 +59,8 @@ class ReviewAnalyzer:
             self.checkpoint_dir.exists()
             and (self.checkpoint_dir / "metadata.json").exists()
             and (self.checkpoint_dir / "model.pt").exists()
+            and (self.checkpoint_dir / "encoder").is_dir()
+            and (self.checkpoint_dir / "tokenizer_config.json").exists()
         )
 
     def load(self) -> None:

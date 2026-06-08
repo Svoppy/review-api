@@ -19,18 +19,18 @@ class DatasetSpec:
 
 DATASET_REGISTRY = [
     DatasetSpec(
-        name="amazon_reviews_2023",
+        name="rureviews",
         task="sentiment",
-        source_url="https://amazon-reviews-2023.github.io/main.html",
-        description="Large-scale real Amazon review corpus for product-review sentiment.",
-        caveat="Sentiment is typically derived from ratings, not manually annotated sentence labels.",
+        source_url="https://github.com/sismetanin/rureviews",
+        description="Russian product-review benchmark with direct sentiment labels.",
+        caveat="Covers sentiment only and does not provide authenticity annotation.",
     ),
     DatasetSpec(
-        name="rusentiment",
+        name="perekrestok",
         task="sentiment",
-        source_url="https://rusentiment.github.io/",
-        description="Russian sentiment benchmark useful for multilingual validation.",
-        caveat="Not e-commerce specific.",
+        source_url="https://huggingface.co/datasets/lapki/perekrestok-reviews",
+        description="Large in-domain Russian retail review corpus with rating-derived sentiment.",
+        caveat="Sentiment is derived from ratings rather than directly annotated for polarity.",
     ),
     DatasetSpec(
         name="opspam",
@@ -40,11 +40,11 @@ DATASET_REGISTRY = [
         caveat="Collected in an elicited experimental setup.",
     ),
     DatasetSpec(
-        name="yelpchi",
+        name="maide_up",
         task="authenticity",
-        source_url="https://www.frontiersin.org/journals/artificial-intelligence/articles/10.3389/frai.2022.922589/full",
-        description="Widely used fake review detection benchmark.",
-        caveat="Labels are benchmark labels with real-world ambiguity.",
+        source_url="https://huggingface.co/datasets/MichiganNLP/MAiDE-up",
+        description="Multilingual benchmark for detecting AI-generated fake reviews.",
+        caveat="Targets synthetic-review authenticity rather than the full spectrum of platform fraud.",
     ),
 ]
 

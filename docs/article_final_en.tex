@@ -1,0 +1,570 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{multirow}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black,
+  pdftitle={Toward a Multitask Transformer-Based Model and Web System for Joint Sentiment Analysis and Review Authenticity Detection in E-Commerce}
+}
+
+\setstretch{1.15}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0.2em}
+
+\title{Toward a Multitask Transformer-Based Model and Web System for Joint Sentiment Analysis and Review Authenticity Detection in E-Commerce}
+\author{Author information to be added before submission}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This paper studies the joint analysis of review sentiment and review authenticity in e-commerce. The problem is practically important because online retail platforms depend not only on detecting whether customer feedback is positive or negative, but also on determining whether that feedback is trustworthy. A highly accurate sentiment model may still produce analytically misleading business signals if a substantial share of input reviews is deceptive, manipulated, or automatically generated.
+
+To address this limitation, the paper proposes a multitask Transformer-based approach with a shared encoder and two task-specific classification heads: one for sentiment classification and one for authenticity detection. The broader dissertation plan considers Russian e-commerce sentiment resources (\texttt{RuReviews}, \texttt{Perekrestok Reviews}), the classical \texttt{OpSpam} deceptive-review benchmark, \texttt{FraudDataset (Yelp)} for fraud-related authenticity signals, and \texttt{MAiDE-up} for AI-generated fake-review detection. However, the current repository snapshot and the current pilot evidence are narrower: only \texttt{RuReviews}, \texttt{Perekrestok Reviews}, and \texttt{MAiDE-up} are first-class locally prepared resources in the present package, and the reported pilot metrics use only sampled subsets of \texttt{RuReviews} and \texttt{MAiDE-up}. Because no single public dataset currently provides large-scale high-quality labels for both tasks simultaneously, the work introduces a unified partially labeled schema that supports heterogeneous datasets within one training pipeline.
+
+Beyond the modeling component, the study develops a reproducibility-oriented end-to-end system, \texttt{ReviewGuard}, that covers data normalization, baseline training, single-task Transformer baselines, multitask training, model export, API-based inference, and a web interface for interactive review analysis. The service is designed to return not only task predictions and confidence scores but also a lightweight transparency layer based on ranked probabilities, truncation status, and short inference notes. At the current stage, a pilot experiment on real public data confirms the viability of the pipeline and provides a baseline reference point for subsequent comparison of classical, single-task, and multitask models. The current contribution is therefore twofold: a concrete multitask formulation for trust-aware review analysis and a deployment-oriented research artifact that can support further controlled experimentation. However, the final Transformer comparison remains a required step before any strong claim about multitask superiority can be made, and the present manuscript should therefore be read as a pilot-backed dissertation draft rather than a final validated article.
+\end{abstract}
+
+\noindent\textbf{Keywords:} sentiment analysis, review authenticity detection, fake review detection, multitask learning, multilingual Transformer, e-commerce, web system.
+
+\section{Introduction}
+
+User reviews are among the most influential sources of information in digital commerce. They affect product ranking, merchant reputation, customer trust, and purchase decisions. For this reason, automatic review analysis has become a standard natural language processing application in e-commerce. Most existing systems focus on sentiment analysis, that is, identifying whether a review expresses a positive, neutral, or negative opinion.
+
+However, real-world e-commerce review analysis cannot rely on sentiment alone. Platforms increasingly face deceptive, incentivized, spam-like, or automatically generated reviews. When such reviews are not filtered, the resulting sentiment signal may be technically correct for the text itself but analytically misleading for the underlying business reality. In other words, a system that detects polarity but ignores authenticity may still support the wrong decision-making process.
+
+This observation suggests that review sentiment and review authenticity are related tasks rather than isolated ones. Both operate on the same text input, both depend on lexical, semantic, and stylistic signals, and both affect downstream trust and analytics. Despite this connection, most deployed systems still train separate models for sentiment analysis and authenticity detection. This separation is understandable from a practical standpoint, but it increases inference cost, duplicates system complexity, and does not exploit potential positive transfer between related tasks.
+
+The goal of this study is to develop a multitask Transformer-based model and a web system for joint sentiment analysis and review authenticity detection in e-commerce. The work combines a research contribution and an engineering contribution. On the research side, it investigates whether a shared Transformer encoder with task-specific heads can improve or stabilize performance across both tasks. On the engineering side, it proposes a reproducible data-to-service pipeline that connects dataset normalization, model training, checkpoint export, API inference, and a browser-based user interface.
+
+The remainder of the article is organized as follows. First, the study is positioned in the literatures on multitask NLP, review authenticity detection, and multilingual review sentiment analysis. Next, the paper formalizes the joint task, describes the heterogeneous data regime and the multitask training design, and presents the current system architecture and pilot evidence. Finally, it distinguishes clearly between what is already supported by the repository and what remains mandatory before the work can be claimed as a fully validated dissertation result.
+
+\section{Related Work}
+
+The theoretical basis of this study lies in modern multitask learning for NLP. Classical work showed that joint learning of related tasks may improve generalization through shared inductive bias. Later Transformer-based approaches demonstrated that a shared encoder with task-specific heads can remain effective across multiple language understanding tasks. Recent surveys emphasize that positive transfer depends on task relatedness, supervision density, and parameter-sharing strategy.
+
+Within review authenticity detection, multitask and cross-domain learning are especially relevant because labeled deception data are fragmented across platforms, languages, and manipulation types. Prior work on deceptive review spam detection established the benchmark setting for truthful versus deceptive reviews, while later studies showed that authenticity should not be treated as a single closed-domain problem. Related lines of research highlighted hijacked reviews, platform-specific fraud signals, and the importance of deployment-oriented moderation models.
+
+The emergence of large language models introduced a new authenticity threat model: fluent AI-generated reviews. Recent studies showed that LLM-generated reviews form a distinct detection challenge rather than a trivial extension of earlier deceptive-review settings. This line was strengthened by multilingual datasets such as \texttt{MAiDE-up}, which demonstrated that detection difficulty varies across languages, domains, and sentiment profiles.
+
+On the sentiment side, e-commerce review analysis benefits from realistic large-scale corpora rather than only narrow benchmark datasets. For Russian-language experimentation, \texttt{RuReviews} and \texttt{Perekrestok Reviews} provide a practical combination of direct sentiment labels and large in-domain review text.
+
+Taken together, the literature reveals four key gaps. First, direct joint modeling of sentiment and authenticity for review-level e-commerce NLP remains limited. Second, authenticity is often treated as a simple binary variable even though practical review manipulation includes crowdsourced deception, platform-filter fraud, hijacked reviews, and AI-generated text. Third, cross-domain and cross-generator robustness remains a major weakness of current authenticity models. Fourth, relatively few works combine a multitask model with a reproducible end-to-end applied system suitable for deployment.
+
+Table~\ref{tab:related} summarizes the positioning of the present study relative to the closest lines of work.
+
+\begin{table}[h]
+\centering
+\caption{Positioning against related work}
+\label{tab:related}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{3.4cm} >{\centering\arraybackslash}p{1.8cm} >{\centering\arraybackslash}p{1.8cm} >{\centering\arraybackslash}p{2.1cm} X}
+\toprule
+Research line & Joint sentiment + authenticity & Partial supervision & Deployment-oriented system & Main limitation relative to this study \\
+\midrule
+Classical deceptive-review detection & No & Rarely & Usually no & Often narrow-domain and text-only \\
+Review sentiment benchmarks & No & Not needed & Usually no & Do not address trust or authenticity \\
+AI-generated review detection & Rarely & Rarely & Usually no & Often limited to synthetic-review settings \\
+This study & Yes & Yes & Yes & Final multitask comparative evidence still incomplete \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Problem Definition and Research Hypotheses}
+
+Let a review text be denoted by $x$. The system must predict two related targets:
+
+\begin{enumerate}[label=\arabic*.]
+  \item $y_s$, the sentiment class, where $y_s \in \{\text{negative}, \text{neutral}, \text{positive}\}$;
+  \item $y_a$, the authenticity class, where $y_a \in \{\text{authentic}, \text{fake}\}$.
+\end{enumerate}
+
+An important challenge is that publicly available datasets rarely provide both labels for the same review at scale. As a result, the learning setup must support partially labeled records, where a review may be annotated for only one of the two tasks.
+
+The main research hypothesis is that joint learning with a shared Transformer encoder will:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item preserve competitive performance for sentiment classification relative to a single-task Transformer baseline;
+  \item improve or stabilize authenticity detection through richer shared language representations;
+  \item produce a more compact and practically deployable inference system than two independent models.
+\end{itemize}
+
+The study evaluates the following specific hypotheses:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item \textbf{H1}: the multitask model does not underperform the single-task Transformer on sentiment analysis;
+  \item \textbf{H2}: the multitask model matches or outperforms text-only baselines for authenticity detection;
+  \item \textbf{H3}: joint training improves robustness under mixed corpora and partial supervision.
+\end{itemize}
+
+At the current stage, these hypotheses remain research targets rather than completed empirical findings. A dissertation defense requires explicit confirmation of H1--H3 through matched baseline, single-task, and multitask experiments on identical splits.
+
+\subsection{Operational Definition of Authenticity}
+
+In this study, the term \textit{authenticity} is used operationally rather than philosophically. A review is treated as \texttt{authentic} when it belongs to the truthful or non-manipulated side of a given benchmark, and as \texttt{fake} when it belongs to the deceptive, fraud-associated, or AI-generated side of that benchmark. This operationalization is practical for supervised learning, but it should not be mistaken for a claim that all negative examples reflect the same real-world phenomenon. One benchmark may represent controlled human deception, another may reflect silver fraud signals, and another may represent synthetic generation by language models. The binary label is therefore an engineering abstraction that enables joint training, while the final interpretation of results must remain dataset-specific.
+
+\section{Research Contribution}
+
+The contribution of the work can be summarized in four points:
+
+\begin{enumerate}[label=\arabic*.]
+  \item a joint review-level multitask formulation for sentiment analysis and authenticity detection under partial supervision;
+  \item a unified data schema that allows heterogeneous public datasets to be combined within one training and evaluation pipeline;
+  \item an authenticity evaluation design that can span deceptive reviews, silver fraud labels, and AI-generated reviews without pretending that these label families are interchangeable;
+  \item an end-to-end applied system that connects model design with export, API inference, and web-based interaction.
+\end{enumerate}
+
+From a positioning perspective, the study is intended to bridge two lines of work that are still often treated independently: review sentiment modeling and review authenticity detection. At the current stage, this contribution should be interpreted as a defended research and engineering framework rather than a fully completed empirical proof of multitask superiority.
+
+\section{Current Manuscript Status}
+
+The present document should be understood as a dissertation article draft with preliminary empirical evidence rather than as a final submission-ready paper. The following distinctions are critical for correct interpretation:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item some datasets are already locally prepared, while others are part of the planned full experiment stack only;
+  \item pilot baseline results are real and documented, but they are small-sample sanity checks rather than the decisive comparison for the central hypothesis;
+  \item the main unresolved empirical requirement is the completed comparison between classical baseline, single-task Transformer, and multitask Transformer models under the same protocol;
+  \item the current repository does not yet include committed trained checkpoints or a complete reproducibility bundle for the pilot metrics;
+  \item without that missing evidence package, the current manuscript should be treated as a proposal-backed research article draft rather than as a defense-ready dissertation paper.
+\end{itemize}
+
+This explicit status framing is not merely a conservative disclaimer. It is methodologically necessary because the central scientific contribution of the dissertation depends on comparative empirical evidence, not only on a plausible architecture or a well-engineered repository.
+
+\section{Data and Experimental Materials}
+
+The experimental framework is built around real and publicly accessible datasets with different label semantics, languages, and domains. Table~\ref{tab:datasets} distinguishes between locally prepared resources and planned extensions.
+
+\begin{table}[h]
+\centering
+\caption{Datasets considered in the study and their current status}
+\label{tab:datasets}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.3cm} >{\raggedright\arraybackslash}p{1.4cm} >{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}p{4.8cm}}
+\toprule
+Dataset & Language & Domain & Current status & Role in the study \\
+\midrule
+\texttt{RuReviews} & RU & e-commerce & locally prepared; used in pilot & primary Russian sentiment benchmark \\
+\texttt{Perekrestok Reviews} & RU & retail & locally prepared; not yet used in pilot results & large in-domain retail corpus \\
+\texttt{MAiDE-up} & multilingual & hospitality & locally prepared; used in pilot & AI-generated review benchmark \\
+\texttt{OpSpam} & EN & hospitality & planned full integration & classical text-only authenticity benchmark \\
+\texttt{FraudDataset (Yelp)} & EN & local commerce & planned full integration & realism-oriented authenticity benchmark \\
+\texttt{Amazon Reviews 2023} & EN & e-commerce & optional extension & large-scale auxiliary transfer corpus \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At the current repository stage, pilot results rely only on sampled subsets of \texttt{RuReviews} and \texttt{MAiDE-up}. \texttt{Perekrestok Reviews} is already normalized locally but has not yet been used in the reported pilot metrics. Datasets such as \texttt{OpSpam} and \texttt{FraudDataset (Yelp)} are part of the final experimental plan but should not be described as already used for reported results in the current snapshot. The current empirical scope is therefore narrower than the intended full dissertation scope.
+
+This distinction is not cosmetic. A small pilot built from 2{,}000 reviews is adequate for pipeline validation, but it is not sufficient by itself for a dissertation-level empirical claim about multitask transfer. A stronger final study should increase sample size, report class distributions explicitly, and validate that duplicate or near-duplicate review texts do not leak across train, validation, and test partitions.
+
+\section{Methodology}
+
+\subsection{Multitask Model Architecture}
+
+The proposed model uses hard parameter sharing. At the architectural level, the dissertation target is a shared multilingual Transformer encoder with two task-specific heads. The longer-term reference backbone is \texttt{XLM-RoBERTa}, whereas the currently executed pilot documented in this repository uses \texttt{distilbert-base-multilingual-cased}. This distinction is essential: the paper's architecture is backbone-agnostic in principle, but the current empirical evidence should be attributed only to the actually executed pilot configuration. The shared encoder produces a contextual representation for each review, which is then passed to two independent classification heads:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item $\text{Head}_s$ for sentiment classification;
+  \item $\text{Head}_a$ for authenticity detection.
+\end{itemize}
+
+Formally,
+\begin{align}
+h &= \text{Encoder}(x), \\
+p_s &= \text{softmax}(W_s h + b_s), \\
+p_a &= \text{softmax}(W_a h + b_a).
+\end{align}
+
+The training loss is defined as a weighted sum:
+\begin{equation}
+L = \lambda_s L_{\text{sentiment}} + \lambda_a L_{\text{authenticity}},
+\end{equation}
+where each task-specific term is included only when the corresponding label exists. This makes the approach compatible with partial supervision.
+
+In practical terms, this means that a mini-batch with only sentiment labels updates the shared encoder and the sentiment head but contributes no authenticity loss, while a mini-batch with only authenticity labels behaves symmetrically. The final dissertation version should make the weighting strategy explicit: either fixed $\lambda_s$ and $\lambda_a$, dynamic loss balancing, or a sampling-based alternative. At least one ablation on task weighting is required because partial supervision changes the effective optimization signal seen by the shared encoder.
+
+\subsection{Baselines}
+
+To evaluate the actual contribution of multitask learning, the following comparison lines are included:
+
+\begin{enumerate}[label=\arabic*.]
+  \item \texttt{TF-IDF + Logistic Regression} for each task;
+  \item \texttt{Single-task Transformer} for sentiment classification;
+  \item \texttt{Single-task Transformer} for authenticity detection;
+  \item \texttt{Multitask Transformer} with a shared encoder.
+\end{enumerate}
+
+For a defense-grade experimental section, these models must be compared on identical splits wherever task coverage permits. Reporting a multitask result on one sample and a single-task result on another would not be methodologically acceptable.
+
+\subsection{Unified Data Schema}
+
+The project uses a unified record format with the following fields:
+\texttt{text}, \texttt{sentiment\_label}, \texttt{authenticity\_label}, \texttt{source}, \texttt{language}, \texttt{domain}, and \texttt{metadata}. This design makes heterogeneous datasets interoperable and supports reproducible experimentation across tasks and domains.
+
+\subsection{Training Protocol}
+
+For a final dissertation-grade evaluation, experiments should be repeated across at least three random seeds, with mean and standard deviation reported for the main metrics. Train, validation, and test splits should be leakage-safe: duplicate or near-duplicate records must not cross split boundaries, and source-specific partitions should remain grouped where required by dataset design.
+
+For partially labeled training, each mini-batch should contribute only the loss terms supported by available labels. Because dataset sizes differ substantially across sources, the final experimental program should compare at least two balancing strategies: naive concatenation and source-balanced sampling. Class imbalance for authenticity detection should be addressed through weighted loss, balanced sampling, or both, with the exact choice documented in the final report.
+
+In the current pilot protocol, the compact multilingual backbone is \texttt{distilbert-base-multilingual-cased} with \texttt{max\_length=128}, \texttt{batch\_size=8}, \texttt{learning\_rate=2e-5}, \texttt{weight\_decay=0.01}, \texttt{epochs=1}, \texttt{dropout=0.1}, \texttt{random\_state=42}, and CPU execution.
+
+The final dissertation configuration may still use \texttt{XLM-RoBERTa} as the main target backbone, but the currently documented executed pilot protocol is based on \texttt{distilbert-base-multilingual-cased}. This distinction must remain explicit to avoid overstating the current evidence. In other words, the present manuscript claims a multitask architecture and a training pipeline, not a completed superiority result for a backbone that has not yet been fully evaluated under the final protocol.
+
+\section{Web System Architecture}
+
+The proposed system is not only a research model but also a deployable application. The current \texttt{ReviewGuard} architecture includes:
+
+\begin{enumerate}[label=\arabic*.]
+  \item raw-data normalization and merging utilities;
+  \item a training CLI for classical baselines, single-task Transformers, and multitask Transformers;
+  \item checkpoint export logic;
+  \item a \texttt{FastAPI} backend;
+  \item a lightweight browser-based interface.
+\end{enumerate}
+
+The inference endpoint \texttt{/analyze} is designed to return:
+
+\begin{itemize}[leftmargin=1.5cm]
+  \item predicted sentiment label;
+  \item sentiment confidence score;
+  \item predicted authenticity label;
+  \item authenticity confidence score;
+  \item an explanation object.
+\end{itemize}
+
+The explanation layer is intentionally lightweight and practical. It exposes ranked task probabilities, token-count information, truncation status, and transparent notes about how to interpret the prediction. It should therefore be treated as a transparency aid rather than a fully causal interpretability framework.
+
+\section{Experimental Design}
+
+The full evaluation plan is:
+
+\begin{enumerate}[label=\arabic*.]
+  \item \texttt{RuReviews} with a classical baseline for sentiment;
+  \item single-task Transformer experiments for sentiment and authenticity separately;
+  \item multitask training on a merged partially labeled corpus;
+  \item domain transfer analysis using \texttt{Perekrestok Reviews};
+  \item authenticity robustness evaluation with benchmark families such as \texttt{OpSpam}, \texttt{FraudDataset}, and \texttt{MAiDE-up} once each is fully integrated.
+\end{enumerate}
+
+The main evaluation metrics are \texttt{Accuracy}, \texttt{Macro-F1}, \texttt{Weighted-F1}, macro-averaged precision, macro-averaged recall, and the confusion matrix. For authenticity detection, \texttt{Macro-F1} is particularly important in the presence of class imbalance.
+
+In addition to aggregate metrics, the final study should include confusion-matrix analysis, comparison tables across baseline, single-task, and multitask models, ablation on task-loss weights, error analysis for false positives and false negatives, and robustness analysis across domains and dataset families.
+
+For a dissertation-grade final version, the results section should also include: (1) a class-distribution table, (2) a majority baseline, (3) repeated runs across several seeds with mean and standard deviation, and (4) a brief significance-oriented comparison where applicable.
+
+\subsection{Required Final Validation Package}
+
+Before defense, the article must include the following empirical package:
+
+\begin{enumerate}[label=\arabic*.]
+  \item a full comparison of \texttt{TF-IDF baseline}, \texttt{single-task Transformer}, and \texttt{multitask Transformer} on the same data split;
+  \item at least three random seeds for each Transformer setting, reported as mean $\pm$ standard deviation;
+  \item class-distribution tables and majority baseline metrics for both tasks;
+  \item confusion matrices and brief qualitative error analysis;
+  \item dataset-specific authenticity evaluation, at minimum separating AI-generated-review performance from any broader mixed-authenticity aggregate;
+  \item at least one ablation on task-loss weighting or parameter-sharing design;
+  \item a small statistical comparison package, such as confidence intervals and a paired significance-oriented test where the protocol makes that defensible.
+\end{enumerate}
+
+Without this package, the manuscript remains a strong pilot-backed draft rather than a defense-ready dissertation article.
+
+\section{Preliminary Results on Real Public Data}
+
+The current repository stage already supports a pilot experiment on real public data with partially documented provenance. A local pilot corpus was built from 1{,}000 sampled \texttt{RuReviews} records and 1{,}000 sampled \texttt{MAiDE-up} records using deterministic sampling with seed 42. The resulting joint pilot set contains 2{,}000 reviews, all labeled for sentiment and 1{,}000 labeled for authenticity. The data were split into 80/10/10 train, validation, and test partitions through the project CLI.
+
+As a first empirical reference point, a \texttt{TF-IDF + Logistic Regression} baseline was trained on the joint pilot corpus. Table~\ref{tab:pilot} summarizes the held-out test metrics.
+
+\begin{table}[h]
+\centering
+\caption{Pilot baseline results on the test split}
+\label{tab:pilot}
+\begin{tabular}{lcccc}
+\toprule
+Task & Accuracy & Macro-F1 & Weighted-F1 & Support \\
+\midrule
+Sentiment & 0.8000 & 0.7368 & 0.8002 & 200 \\
+Authenticity & 0.8000 & 0.7999 & 0.7999 & 100 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These pilot baseline results should be interpreted conservatively. Without a majority baseline, class-distribution tables, repeated runs across several seeds, confidence intervals, significance-oriented comparisons, and confusion matrices, they cannot support strong claims about model superiority. Their value lies elsewhere: they demonstrate that the current pipeline can ingest real public corpora, normalize them, build a joint partially labeled pilot sample, and produce reference metrics under a documented pilot protocol.
+
+The current article also does not embed a full audit trail for the pilot sample itself. In a final dissertation version, the reported table should be accompanied by split-level class distributions, a short leakage-check statement, direct references to preserved training artifacts, and compact confusion matrices for both tasks.
+
+The next required step is a completed comparison of baseline, single-task Transformer, and multitask Transformer models on the same pilot protocol, followed by full-data experiments. If the dissertation timeline is tight, the most defensible fallback is to narrow the formal empirical scope to currently prepared resources and state that wider authenticity coverage is future work rather than pretending that the broader benchmark stack is already complete.
+
+\section{Final Results Package Template}
+
+This section is included in a dissertation-facing form so that the article remains structurally complete while still being honest about the current state of the evidence. The tables below should be populated only with directly auditable final metrics.
+
+\subsection{Split-Level Class Distribution}
+
+Before reporting model quality, the article should disclose the split-level label distribution for each task. This is necessary both for scientific transparency and for correct interpretation of majority baselines.
+
+\begin{table}[h]
+\centering
+\caption{Template for split-level class distribution}
+\label{tab:classdist}
+\begin{tabular}{llrrr}
+\toprule
+Task & Class & Train & Validation & Test \\
+\midrule
+Sentiment & negative & --- & --- & --- \\
+Sentiment & neutral & --- & --- & --- \\
+Sentiment & positive & --- & --- & --- \\
+Authenticity & authentic & --- & --- & --- \\
+Authenticity & fake & --- & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Main Comparative Results}
+
+The core dissertation table must compare the classical baseline, the single-task Transformer baselines, and the multitask Transformer on the same evaluation protocol. For Transformer runs, the reported value should be mean $\pm$ standard deviation across at least three random seeds.
+
+\begin{table}[h]
+\centering
+\caption{Template for the main model comparison}
+\label{tab:mainresults}
+\begin{tabular}{llcccc}
+\toprule
+Model & Task & Accuracy & Macro-F1 & Weighted-F1 & Notes \\
+\midrule
+\texttt{Majority baseline} & Sentiment & --- & --- & --- & reference only \\
+\texttt{TF-IDF + Logistic Regression} & Sentiment & --- & --- & --- & classical baseline \\
+\texttt{Single-task Transformer} & Sentiment & --- & --- & --- & mean $\pm$ std \\
+\texttt{Multitask Transformer} & Sentiment & --- & --- & --- & mean $\pm$ std \\
+\texttt{Majority baseline} & Authenticity & --- & --- & --- & reference only \\
+\texttt{TF-IDF + Logistic Regression} & Authenticity & --- & --- & --- & classical baseline \\
+\texttt{Single-task Transformer} & Authenticity & --- & --- & --- & mean $\pm$ std \\
+\texttt{Multitask Transformer} & Authenticity & --- & --- & --- & mean $\pm$ std \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Dataset-Specific Authenticity Evaluation}
+
+Because binary authenticity collapses heterogeneous manipulation mechanisms, the final article should also report authenticity metrics separately by benchmark family rather than only as a pooled number.
+
+\begin{table}[h]
+\centering
+\caption{Template for dataset-specific authenticity reporting}
+\label{tab:authsources}
+\begin{tabular}{lcccc}
+\toprule
+Source & Model & Accuracy & Macro-F1 & Comment \\
+\midrule
+\texttt{MAiDE-up} & \texttt{TF-IDF + Logistic Regression} & --- & --- & AI-generated reviews \\
+\texttt{MAiDE-up} & \texttt{Single-task Transformer} & --- & --- & AI-generated reviews \\
+\texttt{MAiDE-up} & \texttt{Multitask Transformer} & --- & --- & AI-generated reviews \\
+\texttt{OpSpam} & \texttt{Single-task Transformer} & --- & --- & human deceptive reviews \\
+\texttt{OpSpam} & \texttt{Multitask Transformer} & --- & --- & human deceptive reviews \\
+\texttt{FraudDataset (Yelp)} & \texttt{Single-task Transformer} & --- & --- & silver fraud labels \\
+\texttt{FraudDataset (Yelp)} & \texttt{Multitask Transformer} & --- & --- & silver fraud labels \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Ablation Design}
+
+At minimum, the final dissertation should include one ablation on loss balancing and one ablation on parameter-sharing design. If compute budget is limited, the priority order should be: (1) loss-weight ablation, (2) shared-versus-separate encoder comparison, and only then richer sharing variants.
+
+\begin{table}[h]
+\centering
+\caption{Template for loss-weight ablation}
+\label{tab:lossablation}
+\begin{tabular}{ccccc}
+\toprule
+$\lambda_s$ & $\lambda_a$ & Sentiment Macro-F1 & Authenticity Macro-F1 & Comment \\
+\midrule
+1.0 & 1.0 & --- & --- & balanced default \\
+0.5 & 1.0 & --- & --- & authenticity-prioritized \\
+1.0 & 0.5 & --- & --- & sentiment-prioritized \\
+2.0 & 1.0 & --- & --- & stronger sentiment weight \\
+1.0 & 2.0 & --- & --- & stronger authenticity weight \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Template for parameter-sharing ablation}
+\label{tab:sharingablation}
+\begin{tabular}{lccc}
+\toprule
+Architecture & Sentiment Macro-F1 & Authenticity Macro-F1 & Comment \\
+\midrule
+Separate encoders & --- & --- & non-multitask reference \\
+Hard sharing & --- & --- & current target design \\
+Soft sharing or task-specific projections & --- & --- & optional if implemented \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Error Analysis Structure}
+
+The final paper should include both confusion matrices and short qualitative examples of typical errors. This is particularly important for checking whether very positive authentic reviews are confused with fake reviews or whether short generic fake reviews escape detection.
+
+\begin{table}[h]
+\centering
+\caption{Template for qualitative error analysis}
+\label{tab:erroranalysis}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}p{1.9cm} >{\raggedright\arraybackslash}p{1.9cm} X}
+\toprule
+Task & Gold label & Predicted label & Interpretation of the error \\
+\midrule
+Sentiment & --- & --- & Insert a representative failure case and explain the linguistic reason. \\
+Sentiment & --- & --- & Insert a second representative failure case and explain the linguistic reason. \\
+Authenticity & --- & --- & Insert a representative false positive and explain why the review looked suspicious. \\
+Authenticity & --- & --- & Insert a representative false negative and explain why the fake review appeared plausible. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Statistical Comparison Notes}
+
+For the final article, the comparative claims should be backed not only by point estimates but also by simple statistical reporting. A practical minimum is: mean $\pm$ standard deviation across seeds, confidence intervals where appropriate, and one paired significance-oriented comparison for the primary test split if the protocol supports it. The point of this layer is not statistical theatrics, but to prevent overinterpretation of small metric differences.
+
+\section{Reproducibility and Audit Appendix}
+
+The final dissertation version should include a compact audit appendix that makes the results traceable from raw prepared data to reported tables. At minimum, this appendix should report:
+
+\begin{enumerate}[label=\arabic*.]
+  \item the exact input dataset bundle used for each experiment;
+  \item the split policy, random seeds, and leakage-check procedure;
+  \item the final backbone name, maximum sequence length, learning rate, batch size, epoch count, and loss-weight setting;
+  \item the location or manifest hash of preserved training artifacts and exported checkpoints;
+  \item the exact command-line entry points used to reproduce the final runs.
+\end{enumerate}
+
+Table~\ref{tab:audittrail} gives a compact format that can be filled in once the final experiments are executed.
+
+\begin{table}[h]
+\centering
+\caption{Template for experiment audit trail}
+\label{tab:audittrail}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{2.5cm} X}
+\toprule
+Field & Value to report \\
+\midrule
+Prepared input bundle & --- \\
+Input artifact hash & --- \\
+Split policy & --- \\
+Leakage-check outcome & --- \\
+Random seeds & --- \\
+Backbone & --- \\
+Optimization setup & --- \\
+Checkpoint manifest & --- \\
+Training command & --- \\
+Evaluation command & --- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Threats to Validity and Limitations}
+
+The study has several important limitations.
+
+First, public authenticity datasets differ substantially in label semantics. \texttt{OpSpam} reflects a controlled deceptive-writing setup, \texttt{FraudDataset} relies on silver fraud signals, and \texttt{MAiDE-up} targets AI-generated reviews. These are related but not identical manifestations of authenticity.
+
+Second, Russian-language e-commerce resources currently provide much stronger coverage for sentiment than for authenticity. This asymmetry creates the risk that one branch of the multitask model receives richer supervision than the other.
+
+Third, harmonizing all authenticity signals into a single binary target (\texttt{authentic}/\texttt{fake}) inevitably simplifies meaningfully different phenomena. Final experiments should therefore include dataset-specific reporting and discussion of whether binary harmonization is empirically justified. If enough data are available, a multi-class or hierarchical authenticity formulation should also be considered as an ablation against the simpler binary setup.
+
+Fourth, the current transparency layer is not a fully causal interpretability framework. It improves practical transparency, but it does not solve interpretability in a strict theoretical sense.
+
+Fifth, the current repository snapshot does not yet contain the final Transformer comparison, committed trained checkpoints, or a complete reproducibility package. Therefore, the present article should be interpreted as a strong research and engineering foundation with preliminary empirical evidence, rather than as the final fully validated dissertation result.
+
+Sixth, the current pilot package is not yet auditable end-to-end from repository contents alone because the exact pilot training artifacts and the underlying prepared corpora are not committed in the snapshot. This does not invalidate the pilot methodology, but it limits independent verification at the current stage.
+
+Seventh, the current article does not yet report the confusion patterns that matter most for deployment, such as whether highly polarized authentic reviews are misclassified as fake or whether short generic fake reviews are misclassified as authentic. A dissertation defense should include at least a compact qualitative error analysis for these cases.
+
+\section{Discussion}
+
+The most scientifically interesting outcome of this line of work will not simply be the best F1 score on a single dataset, but the behavior of transfer across tasks and domains. If authenticity detection improves without degrading sentiment quality, the result will support multitask learning as a practical approach for trust-aware review analytics. If the opposite happens, that result will also be scientifically valuable because it would show that task relatedness in this problem is weaker or more conditional than the architecture initially suggests.
+
+From a systems perspective, a shared encoder also reduces inference complexity relative to two separate Transformer services. For an e-commerce deployment, that matters: lower operational cost, a single export format, simpler maintenance, and a cleaner integration path into moderation or analytics workflows.
+
+The growing importance of AI-generated reviews further strengthens the relevance of the work. By 2026, authenticity detection should not be framed only as a problem of human-written deception; it must also address synthetic review generation and cross-generator generalization. This is one reason the combined perspective of the article matters: sentiment analysis by itself cannot distinguish trustworthy user feedback from persuasive but synthetic text.
+
+At the same time, the current draft should resist the temptation to collapse all authenticity settings into one headline number. A stronger final discussion will need to separate at least three evaluation regimes: sentiment on e-commerce reviews, authenticity on AI-generated reviews, and mixed or cross-domain authenticity under heterogeneous label semantics.
+
+\section{Conclusion}
+
+This paper presents a multitask Transformer-based model and a web system for joint sentiment analysis and review authenticity detection in e-commerce. Instead of treating the two tasks as separate services, the proposed approach uses a shared encoder with task-specific heads and supports partially labeled heterogeneous corpora.
+
+At the current stage, the work already provides a clear methodological scope, a defensible research framing, a unified data schema, a practical deployment architecture, and a pilot baseline on real public data. It also clarifies how heterogeneous authenticity benchmarks can be incorporated into one supervised learning workflow without pretending that their labels are semantically identical. However, the article should not yet be treated as a fully completed empirical study. Before submission as a final dissertation article, the project still requires the decisive comparison between baseline, single-task, and multitask models, together with ablation studies, robustness analysis, repeated runs, statistically grounded result tables, and an auditable reproducibility package.
+
+In short, the current manuscript is best understood as a strong and technically coherent foundation rather than as a completed dissertation result. Its present scientific value lies in clearly defining the problem, the modeling assumptions, the deployment artifact, and the exact empirical package that must still be completed for a credible final defense.
+
+\begin{thebibliography}{99}
+
+\bibitem{caruana1997}
+Caruana, R. Multitask Learning. \textit{Machine Learning}, 1997.
+
+\bibitem{devlin2019}
+Devlin, J., Chang, M.-W., Lee, K., Toutanova, K. BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding. \textit{NAACL-HLT}, 2019.
+
+\bibitem{liu2019}
+Liu, X., He, P., Chen, W., Gao, J. Multi-Task Deep Neural Networks for Natural Language Understanding. \textit{ACL}, 2019.
+
+\bibitem{zhang2023}
+Zhang, Z., Yu, W., Yu, M., Guo, Z., Jiang, M. A Survey of Multi-task Learning in Natural Language Processing: Regarding Task Relatedness and Training Methods. \textit{EACL}, 2023.
+
+\bibitem{ott2011}
+Ott, M., Choi, Y., Cardie, C., Hancock, J. T. Finding Deceptive Opinion Spam by Any Stretch of the Imagination. \textit{ACL}, 2011.
+
+\bibitem{hai2016}
+Hai, Z., Zhao, P., Cheng, P., Yang, P., Li, X.-L. Deceptive Review Spam Detection via Exploiting Task Relatedness and Unlabeled Data. \textit{EMNLP}, 2016.
+
+\bibitem{daryani2021}
+Daryani, S., Caverlee, J. Identifying Hijacked Reviews. \textit{ECNLP}, 2021.
+
+\bibitem{nayak2022}
+Nayak, A., Garera, N. Deploying Unified BERT Moderation Model for E-Commerce Reviews. \textit{EMNLP Industry}, 2022.
+
+\bibitem{liyanage2024}
+Liyanage, A. et al. Detecting AI-enhanced Opinion Spambots: A Study on LLM-generated Hotel Reviews. \textit{ECNLP}, 2024.
+
+\bibitem{ignat2025}
+Ignat, O., Xu, X., Mihalcea, R. MAiDE-up: Multilingual Deception Detection of AI-generated Hotel Reviews. \textit{Findings of NAACL}, 2025.
+
+\bibitem{agrahari2025}
+Agrahari, S., Kumar, S., Sanasam, R. S. Can You Really Trust That Review? ProtoFewRoBERTa and DetectAIRev: A Prototypical Few-Shot Method and Multi-Domain Benchmark for Detecting AI-Generated Reviews. \textit{Findings of IJCNLP-AACL}, 2025.
+
+\bibitem{hou2023}
+Hou, Y. et al. Amazon Reviews 2023. McAuley Lab, 2023.
+
+\bibitem{sismetanin}
+Sismetanin, A. RuReviews: An Automatically Annotated Sentiment Analysis Dataset of Product Reviews in Russian. GitHub repository.
+
+\bibitem{perekrestok}
+Hugging Face. \texttt{lapki/perekrestok-reviews} dataset card.
+
+\bibitem{keung2020}
+Keung, P., Lu, Y., Szarvas, G., Smith, N. A. The Multilingual Amazon Reviews Corpus. \textit{EMNLP}, 2020.
+
+\bibitem{shajalal2024}
+Shajalal, M., Atabuzzaman, M., Boden, A., Stevens, G., Du, D. What Matters in Explanations: Towards Explainable Fake Review Detection Focusing on Transformers. \textit{arXiv}, 2024.
+
+\end{thebibliography}
+
+\end{document}

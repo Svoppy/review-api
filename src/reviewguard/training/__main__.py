@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import platform
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -70,6 +73,60 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 def _write_report(export_dir: Path, payload: dict) -> None:
     write_json(export_dir / "train_report.json", payload)
+
+
+def _collect_runtime_metadata() -> dict[str, Any]:
+    package_versions: dict[str, str | None] = {}
+    try:
+        from importlib.metadata import PackageNotFoundError, version
+    except ImportError:
+        PackageNotFoundError = Exception  # type: ignore[assignment]
+        version = None  # type: ignore[assignment]
+
+    for package_name in ("numpy", "pandas", "scikit-learn", "torch", "transformers", "fastapi"):
+        if version is None:
+            package_versions[package_name] = None
+            continue
+        try:
+            package_versions[package_name] = version(package_name)
+        except PackageNotFoundError:
+            package_versions[package_name] = None
+
+    return {
+        "python_version": sys.version.split()[0],
+        "platform": platform.platform(),
+        "package_versions": package_versions,
+    }
+
+
+def _hash_file(path: str | Path) -> str | None:
+    file_path = Path(path)
+    if not file_path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with file_path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _summarize_input_records(records: list[dict[str, Any]]) -> dict[str, Any]:
+    sources: dict[str, int] = {}
+    sentiment_labeled = 0
+    authenticity_labeled = 0
+    for record in records:
+        source = str(record.get("source") or "unknown")
+        sources[source] = sources.get(source, 0) + 1
+        if record.get("sentiment_label") is not None:
+            sentiment_labeled += 1
+        if record.get("authenticity_label") is not None:
+            authenticity_labeled += 1
+    return {
+        "records": len(records),
+        "sources": sources,
+        "sentiment_labeled": sentiment_labeled,
+        "authenticity_labeled": authenticity_labeled,
+    }
 
 
 def _pick_config_value(*values: Any, default: Any) -> Any:
@@ -200,6 +257,11 @@ def run_baseline(args: argparse.Namespace) -> int:
 
     report = {
         "trainer": "baseline",
+        "input_path": str(args.input_path),
+        "input_sha256": _hash_file(args.input_path),
+        "input_summary": _summarize_input_records(records),
+        "runtime": _collect_runtime_metadata(),
+        "random_state": split_random_state,
         "split_sizes": {name: len(rows) for name, rows in split.items()},
         "validation_metrics": trainer.evaluate(split["valid"]) if split["valid"] else {},
         "test_metrics": trainer.evaluate(split["test"]) if split["test"] else {},
@@ -238,6 +300,11 @@ def run_single_task(args: argparse.Namespace) -> int:
     report = {
         "trainer": "single_task_transformer",
         "task": args.task,
+        "input_path": str(args.input_path),
+        "input_sha256": _hash_file(args.input_path),
+        "input_summary": _summarize_input_records(records),
+        "runtime": _collect_runtime_metadata(),
+        "random_state": split_random_state,
         "split_sizes": {name: len(rows) for name, rows in split.items()},
         "labeled_split_sizes": {
             name: len(labeled_records_for_task(rows, args.task)) for name, rows in split.items()
@@ -283,6 +350,7 @@ def run_multitask(args: argparse.Namespace) -> int:
             MultitaskTrainingConfig.authenticity_loss_weight,
         ),
         device=train_cfg.get("device", MultitaskTrainingConfig.device),
+        random_state=split_random_state,
     )
 
     trainer = MultitaskTrainingScaffold(config)
@@ -291,6 +359,11 @@ def run_multitask(args: argparse.Namespace) -> int:
 
     report = {
         "trainer": "multitask",
+        "input_path": str(args.input_path),
+        "input_sha256": _hash_file(args.input_path),
+        "input_summary": _summarize_input_records(records),
+        "runtime": _collect_runtime_metadata(),
+        "random_state": split_random_state,
         "split_sizes": {name: len(rows) for name, rows in split.items()},
         "fit_summary": fit_summary,
         "validation_metrics": trainer.evaluate(split["valid"]) if split["valid"] else {},

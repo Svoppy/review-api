@@ -1,3 +1,4 @@
+from reviewguard.data.audit import build_dataset_audit_report, hash_input_file, write_audit_report
 from reviewguard.data.pipeline import (
     AUTHENTICITY_LABELS,
     DATASET_LOADERS,
@@ -26,6 +27,8 @@ __all__ = [
     "DATASET_LOADERS",
     "SENTIMENT_LABELS",
     "UnifiedReviewRecord",
+    "build_dataset_audit_report",
+    "hash_input_file",
     "load_dataset",
     "load_maide_up",
     "load_opspam",
@@ -40,6 +43,7 @@ __all__ = [
     "normalize_text",
     "process_dataset",
     "summarize_unified_records",
+    "write_audit_report",
     "write_csv",
     "write_jsonl",
 ]

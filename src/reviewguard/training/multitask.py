@@ -16,6 +16,12 @@ from reviewguard.training.export import ensure_export_dir, write_json
 from reviewguard.training.metrics import compute_multitask_metrics
 
 
+def seed_training_runtime(random_state: int) -> None:
+    torch.manual_seed(random_state)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(random_state)
+
+
 @dataclass(frozen=True)
 class MultitaskTrainingConfig:
     model_name: str = settings.model_name
@@ -28,6 +34,7 @@ class MultitaskTrainingConfig:
     sentiment_loss_weight: float = 1.0
     authenticity_loss_weight: float = 1.0
     device: str = "cpu"
+    random_state: int = 42
 
 
 class UnifiedReviewDataset(Dataset[dict[str, torch.Tensor]]):
@@ -85,6 +92,7 @@ class MultitaskTrainingScaffold:
 
     def __init__(self, config: MultitaskTrainingConfig | None = None) -> None:
         self.config = config or MultitaskTrainingConfig()
+        seed_training_runtime(self.config.random_state)
         self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
         self.model = MultiTaskTransformer(
             model_name=self.config.model_name,
@@ -103,7 +111,16 @@ class MultitaskTrainingScaffold:
             tokenizer=self.tokenizer,
             max_length=self.config.max_length,
         )
-        return DataLoader(dataset, batch_size=self.config.batch_size, shuffle=shuffle)
+        generator = None
+        if shuffle:
+            generator = torch.Generator()
+            generator.manual_seed(self.config.random_state)
+        return DataLoader(
+            dataset,
+            batch_size=self.config.batch_size,
+            shuffle=shuffle,
+            generator=generator,
+        )
 
     def _compute_batch_loss(self, batch: dict[str, torch.Tensor]) -> tuple[torch.Tensor, dict[str, int]]:
         outputs = self.model(
@@ -256,6 +273,7 @@ class MultitaskTrainingScaffold:
                 "sentiment_loss_weight": self.config.sentiment_loss_weight,
                 "authenticity_loss_weight": self.config.authenticity_loss_weight,
                 "device": self.config.device,
+                "random_state": self.config.random_state,
             },
             "history": getattr(self, "history", []),
             "consumer_note": "The FastAPI app loads this exported directory directly via ReviewAnalyzer.",

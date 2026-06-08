@@ -38,6 +38,15 @@ There is still no trained checkpoint committed in the repository. Until you trai
 
 `XLM-R` is a practical starting point because it is multilingual and supports Russian and English review text in one encoder.
 
+Supported dataset loaders currently implemented in code:
+
+- `rureviews`
+- `perekrestok`
+- `opspam`
+- `maide_up`
+
+Additional datasets mentioned in the research notes are planned experimental targets, not yet first-class normalization adapters in the current repository snapshot.
+
 ## Recommended real datasets for phase 1
 
 - `RuReviews` as the primary Russian e-commerce sentiment benchmark
@@ -64,7 +73,7 @@ tests/
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+.venv\Scripts\activate
 python -m pip install --upgrade pip setuptools wheel
 pip install -e .
 uvicorn reviewguard.api.main:app --reload
@@ -76,31 +85,23 @@ Then open `http://127.0.0.1:8000`.
 
 To download the public Hugging Face datasets used in the project:
 
-```bash
-PYTHONPATH=src .venv314/bin/python scripts/download_public_datasets.py \
-  --datasets perekrestok maide_up \
-  --output-root data/raw
+```powershell
+$env:PYTHONPATH='src'
+python scripts/download_public_datasets.py --datasets perekrestok maide_up --output-root data/raw
 ```
 
 To create a deterministic pilot subset for CPU-friendly experiments:
 
-```bash
-PYTHONPATH=src .venv314/bin/python scripts/sample_unified_dataset.py \
-  --input data/processed/rureviews.jsonl \
-  --output data/processed/rureviews.pilot1k.jsonl \
-  --max-rows 1000 \
-  --seed 42 \
-  --stratify-field sentiment_label
+```powershell
+$env:PYTHONPATH='src'
+python scripts/sample_unified_dataset.py --input data/processed/rureviews.jsonl --output data/processed/rureviews.pilot1k.jsonl --max-rows 1000 --seed 42 --stratify-field sentiment_label
 ```
 
 Example for `RuReviews`:
 
-```bash
-PYTHONPATH=src python3.14 -m reviewguard.data \
-  --dataset rureviews \
-  --input data/raw/rureviews/rureviews.csv \
-  --output data/processed/rureviews.jsonl \
-  --format jsonl
+```powershell
+$env:PYTHONPATH='src'
+python -m reviewguard.data --dataset rureviews --input data/raw/rureviews/rureviews.csv --output data/processed/rureviews.jsonl --format jsonl
 ```
 
 Supported dataset adapters right now:
@@ -112,31 +113,32 @@ Supported dataset adapters right now:
 
 To merge several processed sources into one joint corpus:
 
-```bash
-PYTHONPATH=src python3.14 -m reviewguard.data merge \
-  --inputs data/processed/rureviews.jsonl data/processed/opspam.jsonl \
-  --output data/processed/joint_reviews.jsonl \
-  --format jsonl
+```powershell
+$env:PYTHONPATH='src'
+python -m reviewguard.data merge --inputs data/processed/rureviews.jsonl data/processed/opspam.jsonl --output data/processed/joint_reviews.jsonl --format jsonl
+```
+
+To generate a dissertation-facing audit report with split sizes, class balance, majority baselines, and exact overlap checks:
+
+```powershell
+$env:PYTHONPATH='src'
+python -m reviewguard.data audit --input data/processed/joint_reviews.jsonl --output reports/joint_reviews.audit.json --random-state 42
 ```
 
 ## Train a classical baseline
 
-```bash
-PYTHONPATH=src python3.14 -m reviewguard.training baseline \
-  --input data/processed/rureviews.jsonl \
-  --export-dir models/baseline-rureviews
+```powershell
+$env:PYTHONPATH='src'
+python -m reviewguard.training baseline --input data/processed/rureviews.jsonl --export-dir models/baseline-rureviews
 ```
 
 This writes a `manifest.json`, task model files, and `train_report.json`.
 
 ## Train a single-task Transformer baseline
 
-```bash
-PYTHONPATH=src python3.14 -m reviewguard.training single-task \
-  --task sentiment \
-  --input data/processed/rureviews.jsonl \
-  --export-dir models/single-task-sentiment \
-  --config configs/model.multitask.yaml
+```powershell
+$env:PYTHONPATH='src'
+python -m reviewguard.training single-task --task sentiment --input data/processed/rureviews.jsonl --export-dir models/single-task-sentiment --config configs/model.multitask.yaml
 ```
 
 Use `--task authenticity` for the authenticity-only baseline.
@@ -145,11 +147,9 @@ Single-task exports are baseline artifacts for comparison and analysis. The curr
 
 ## Train the multitask Transformer
 
-```bash
-PYTHONPATH=src python3.14 -m reviewguard.training multitask \
-  --input data/processed/joint_reviews.jsonl \
-  --export-dir models/latest \
-  --config configs/model.multitask.yaml
+```powershell
+$env:PYTHONPATH='src'
+python -m reviewguard.training multitask --input data/processed/joint_reviews.jsonl --export-dir models/latest --config configs/model.multitask.yaml
 ```
 
 The multitask export writes:
@@ -178,7 +178,7 @@ Example response shape:
   "sentiment_confidence": 0.91,
   "authenticity_label": "authentic",
   "authenticity_confidence": 0.88,
-  "model_name": "models/latest/encoder",
+  "model_name": "FacebookAI/xlm-roberta-base",
   "explanation": {
     "sentiment_top_probabilities": [
       { "label": "positive", "probability": 0.91 },
@@ -225,3 +225,12 @@ Example response shape:
 - [Dataset notes](docs/datasets.md)
 - [Workflow guide](docs/workflow.md)
 - [Roadmap](docs/roadmap.md)
+- [Pilot results](docs/pilot_results.md)
+- [Dissertation audit (RU)](docs/dissertation_audit_ru.md)
+- [Submission checklist (RU)](docs/article_submission_checklist_ru.md)
+- [Results table templates (RU)](docs/results_tables_template_ru.md)
+- [Reproducibility note (RU)](docs/reproducibility_note_ru.md)
+- [Tested environment (RU)](docs/tested_environment_ru.md)
+- [Final article draft (RU)](docs/article_final_ru.md)
+- [Final article in LaTeX (EN)](docs/article_final_en.tex)
+- [Results table templates (EN)](docs/results_tables_template_en.md)

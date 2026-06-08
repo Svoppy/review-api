@@ -1,0 +1,199 @@
+{
+  "input_path": "C:\\projects\\aitu\\review-api\\.tmp_manual_audit\\joint.jsonl",
+  "input_sha256": "8ee569198c831c1bfda664ff6b6a41862b91c97276b383a53c2f3444a3ddcdb1",
+  "random_state": 42,
+  "records": 10,
+  "split_sizes": {
+    "train": 8,
+    "valid": 1,
+    "test": 1
+  },
+  "split_overlap": {
+    "train_vs_valid": {
+      "exact_text_overlap": 0,
+      "record_id_overlap": 0
+    },
+    "train_vs_test": {
+      "exact_text_overlap": 0,
+      "record_id_overlap": 0
+    },
+    "valid_vs_test": {
+      "exact_text_overlap": 0,
+      "record_id_overlap": 0
+    }
+  },
+  "tasks": {
+    "sentiment": {
+      "train_distribution": {
+        "labeled_records": 8,
+        "counts": {
+          "negative": 2,
+          "neutral": 2,
+          "positive": 4
+        },
+        "proportions": {
+          "negative": 0.25,
+          "neutral": 0.25,
+          "positive": 0.5
+        },
+        "majority_label": "positive"
+      },
+      "validation_distribution": {
+        "labeled_records": 1,
+        "counts": {
+          "negative": 1,
+          "neutral": 0,
+          "positive": 0
+        },
+        "proportions": {
+          "negative": 1.0,
+          "neutral": 0.0,
+          "positive": 0.0
+        },
+        "majority_label": "negative"
+      },
+      "test_distribution": {
+        "labeled_records": 1,
+        "counts": {
+          "negative": 0,
+          "neutral": 1,
+          "positive": 0
+        },
+        "proportions": {
+          "negative": 0.0,
+          "neutral": 1.0,
+          "positive": 0.0
+        },
+        "majority_label": "neutral"
+      },
+      "majority_baseline": {
+        "validation": {
+          "accuracy": 0.0,
+          "macro_f1": 0.0,
+          "weighted_f1": 0.0,
+          "precision_macro": 0.0,
+          "recall_macro": 0.0,
+          "support": 1,
+          "per_label_support": {
+            "negative": 1,
+            "neutral": 0,
+            "positive": 0
+          },
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ],
+          "majority_label": "positive"
+        },
+        "test": {
+          "accuracy": 0.0,
+          "macro_f1": 0.0,
+          "weighted_f1": 0.0,
+          "precision_macro": 0.0,
+          "recall_macro": 0.0,
+          "support": 1,
+          "per_label_support": {
+            "negative": 0,
+            "neutral": 1,
+            "positive": 0
+          },
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              0,
+              0
+            ]
+          ],
+          "majority_label": "positive"
+        }
+      }
+    },
+    "authenticity": {
+      "train_distribution": {
+        "labeled_records": 4,
+        "counts": {
+          "authentic": 2,
+          "fake": 2
+        },
+        "proportions": {
+          "authentic": 0.5,
+          "fake": 0.5
+        },
+        "majority_label": "authentic"
+      },
+      "validation_distribution": {
+        "labeled_records": 0,
+        "counts": {
+          "authentic": 0,
+          "fake": 0
+        },
+        "proportions": {
+          "authentic": 0.0,
+          "fake": 0.0
+        },
+        "majority_label": null
+      },
+      "test_distribution": {
+        "labeled_records": 1,
+        "counts": {
+          "authentic": 0,
+          "fake": 1
+        },
+        "proportions": {
+          "authentic": 0.0,
+          "fake": 1.0
+        },
+        "majority_label": "fake"
+      },
+      "majority_baseline": {
+        "validation": {},
+        "test": {
+          "accuracy": 0.0,
+          "macro_f1": 0.0,
+          "weighted_f1": 0.0,
+          "precision_macro": 0.0,
+          "recall_macro": 0.0,
+          "support": 1,
+          "per_label_support": {
+            "authentic": 0,
+            "fake": 1
+          },
+          "confusion_matrix": [
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              0
+            ]
+          ],
+          "majority_label": "authentic"
+        }
+      }
+    }
+  }
+}

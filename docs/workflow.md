@@ -28,12 +28,9 @@ Missing labels are allowed. This is important because most public datasets only 
 
 CLI:
 
-```bash
-PYTHONPATH=src python3.14 -m reviewguard.data \
-  --dataset rureviews \
-  --input data/raw/rureviews/rureviews.csv \
-  --output data/processed/rureviews.jsonl \
-  --format jsonl
+```powershell
+$env:PYTHONPATH='src'
+python -m reviewguard.data --dataset rureviews --input data/raw/rureviews/rureviews.csv --output data/processed/rureviews.jsonl --format jsonl
 ```
 
 Supported adapters:
@@ -43,23 +40,22 @@ Supported adapters:
 - `opspam`
 - `maide_up`
 
+Planned datasets mentioned elsewhere in the research notes, such as `FraudYelpDataset`, `KazSAnDRA`, and `Amazon Reviews 2023`, are not current first-class normalization adapters in this repository snapshot.
+
 To build a shared multitask corpus from several processed files:
 
-```bash
-PYTHONPATH=src python3.14 -m reviewguard.data merge \
-  --inputs data/processed/rureviews.jsonl data/processed/opspam.jsonl data/processed/maide_up.jsonl \
-  --output data/processed/joint_reviews.jsonl \
-  --format jsonl
+```powershell
+$env:PYTHONPATH='src'
+python -m reviewguard.data merge --inputs data/processed/rureviews.jsonl data/processed/opspam.jsonl data/processed/maide_up.jsonl --output data/processed/joint_reviews.jsonl --format jsonl
 ```
 
 ## Baseline training
 
 CLI:
 
-```bash
-PYTHONPATH=src python3.14 -m reviewguard.training baseline \
-  --input data/processed/rureviews.jsonl \
-  --export-dir models/baseline-rureviews
+```powershell
+$env:PYTHONPATH='src'
+python -m reviewguard.training baseline --input data/processed/rureviews.jsonl --export-dir models/baseline-rureviews
 ```
 
 What it does:
@@ -73,11 +69,9 @@ What it does:
 
 CLI:
 
-```bash
-PYTHONPATH=src python3.14 -m reviewguard.training multitask \
-  --input data/processed/joint_reviews.jsonl \
-  --export-dir models/latest \
-  --config configs/model.multitask.yaml
+```powershell
+$env:PYTHONPATH='src'
+python -m reviewguard.training multitask --input data/processed/joint_reviews.jsonl --export-dir models/latest --config configs/model.multitask.yaml
 ```
 
 What it does:
@@ -92,20 +86,14 @@ What it does:
 
 CLI:
 
-```bash
-PYTHONPATH=src python3.14 -m reviewguard.training single-task \
-  --input data/processed/joint_reviews.jsonl \
-  --export-dir models/single-task-sentiment \
-  --task sentiment \
-  --config configs/model.multitask.yaml
+```powershell
+$env:PYTHONPATH='src'
+python -m reviewguard.training single-task --input data/processed/joint_reviews.jsonl --export-dir models/single-task-sentiment --task sentiment --config configs/model.multitask.yaml
 ```
 
-```bash
-PYTHONPATH=src python3.14 -m reviewguard.training single-task \
-  --input data/processed/joint_reviews.jsonl \
-  --export-dir models/single-task-authenticity \
-  --task authenticity \
-  --config configs/model.multitask.yaml
+```powershell
+$env:PYTHONPATH='src'
+python -m reviewguard.training single-task --input data/processed/joint_reviews.jsonl --export-dir models/single-task-authenticity --task authenticity --config configs/model.multitask.yaml
 ```
 
 What it does:
