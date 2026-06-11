@@ -2,6 +2,7 @@ import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 
@@ -24,6 +25,7 @@ def test_analyzer_readiness_requires_export_files(tmp_path: Path) -> None:
     (tmp_path / "encoder").mkdir()
     (tmp_path / "tokenizer_config.json").write_text("{}")
     assert analyzer.is_ready() is True
+    assert analyzer.effective_model_name() == "demo"
 
 
 def test_analyzer_returns_explanation_artifacts() -> None:
@@ -56,7 +58,8 @@ def test_analyzer_returns_explanation_artifacts() -> None:
         "max_length": 4,
     }
 
-    result = analyzer.analyze("Helpful review text for inference.")
+    with patch.object(ReviewAnalyzer, "research_context", return_value={"scope": "pilot", "warnings": []}):
+        result = analyzer.analyze("Helpful review text for inference.")
 
     assert result["sentiment_label"] == "positive"
     assert result["authenticity_label"] == "fake"
@@ -64,6 +67,8 @@ def test_analyzer_returns_explanation_artifacts() -> None:
     assert result["explanation"]["token_count"] == 4
     assert result["explanation"]["max_length"] == 4
     assert result["explanation"]["truncated"] is True
+    assert "truncated_input" in result["explanation"]["risk_flags"]
+    assert result["research_context"]["scope"] == "pilot"
     assert [item["label"] for item in result["explanation"]["sentiment_top_probabilities"]] == [
         "positive",
         "negative",
@@ -81,3 +86,42 @@ def test_analyzer_returns_explanation_artifacts() -> None:
         "Only the first 4 tokens were scored" in note
         for note in result["explanation"]["notes"]
     )
+
+
+def test_analyzer_tolerates_token_type_ids_from_tokenizer() -> None:
+    class DummyTokenizer:
+        def __call__(self, text: str, **kwargs):
+            raw_ids = [101, 22, 23, 102]
+            if kwargs.get("return_tensors") == "pt":
+                token_ids = raw_ids[: kwargs["max_length"]]
+                return {
+                    "input_ids": torch.tensor([token_ids], dtype=torch.long),
+                    "attention_mask": torch.ones((1, len(token_ids)), dtype=torch.long),
+                    "token_type_ids": torch.zeros((1, len(token_ids)), dtype=torch.long),
+                }
+            return {"input_ids": raw_ids}
+
+    class DummyModel:
+        def __call__(self, **kwargs):
+            assert "token_type_ids" in kwargs
+            return SimpleNamespace(
+                sentiment_logits=torch.tensor([[0.2, 0.1, 0.7]]),
+                authenticity_logits=torch.tensor([[0.9, 0.1]]),
+            )
+
+    analyzer = ReviewAnalyzer(checkpoint_dir=Path("models/latest"))
+    analyzer.device = torch.device("cpu")
+    analyzer.tokenizer = DummyTokenizer()
+    analyzer.model = DummyModel()
+    analyzer.metadata = {
+        "encoder_model_name": "demo-export",
+        "sentiment_labels": ["negative", "neutral", "positive"],
+        "authenticity_labels": ["authentic", "fake"],
+        "max_length": 8,
+    }
+
+    with patch.object(ReviewAnalyzer, "research_context", return_value={"scope": "pilot", "warnings": []}):
+        result = analyzer.analyze("Smoke test")
+
+    assert result["sentiment_label"] == "positive"
+    assert result["authenticity_label"] == "authentic"

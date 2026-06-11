@@ -1,0 +1,50 @@
+[
+  {
+    "id": "authentic_hotel_en",
+    "language": "en",
+    "title_ru": "Аутентичный сбалансированный отзыв о проживании",
+    "why_in_demo": "Показать, что модель умеет находить правдоподобный, неброский authentic review.",
+    "speaker_note": "Это хороший первый пример, потому что он звучит естественно и без рекламных гипербол.",
+    "text": "We stayed for one night before an early flight. Check-in was quick, the room was clean enough, and the price matched what we got."
+  },
+  {
+    "id": "authentic_apartment_en",
+    "language": "en",
+    "title_ru": "Еще один аутентичный отзыв без преувеличений",
+    "why_in_demo": "Подтвердить, что модель не обязана видеть только negative/fake паттерны.",
+    "speaker_note": "В этом примере есть реалистичный тон: умеренная оценка, без чрезмерной эмоциональности.",
+    "text": "The apartment looked exactly like the photos. Nothing luxurious, but everything worked and the host answered messages quickly."
+  },
+  {
+    "id": "suspicious_hotel_en",
+    "language": "en",
+    "title_ru": "Подозрительно восторженный fake-style отзыв",
+    "why_in_demo": "Показать сильную сторону authenticity detection на гиперболизированном отзыве.",
+    "speaker_note": "Здесь полезно акцентировать, что текст слишком идеализирован и похож на шаблонный promotional review.",
+    "text": "This hotel is absolutely perfect in every possible way, unbelievably luxurious, flawless, magical, and life-changing for everyone."
+  },
+  {
+    "id": "ai_style_hotel_en",
+    "language": "en",
+    "title_ru": "AI-like synthetic review",
+    "why_in_demo": "Показать чувствительность модели к современному типу угроз: гладкий LLM-like review.",
+    "speaker_note": "Хороший пример для связи с MAiDE-up и угрозой AI-generated reviews.",
+    "text": "An exceptional and unforgettable stay with impeccable ambiance, superior comfort, and an extraordinary level of service beyond expectations."
+  },
+  {
+    "id": "product_positive_ru",
+    "language": "ru",
+    "title_ru": "Русскоязычный положительный отзыв о товаре",
+    "why_in_demo": "Показать, что sentiment по-русски работает, но authenticity на pilot-модели еще нестабильна.",
+    "speaker_note": "Это удобно использовать как честный limitation case: тональность распознается хорошо, а authenticity может ошибаться.",
+    "text": "Отличный товар, пришел быстро, упаковка аккуратная, качество полностью устроило."
+  },
+  {
+    "id": "product_neutral_ru",
+    "language": "ru",
+    "title_ru": "Русскоязычный близкий к neutral отзыв",
+    "why_in_demo": "Показать слабое место pilot-конфигурации: редкий neutral класс и смешение доменов.",
+    "speaker_note": "Это лучший пример, чтобы объяснить, почему macro-F1 по sentiment пока неидеален.",
+    "text": "Обычный товар, характеристики соответствуют описанию, доставка стандартная, без сюрпризов."
+  }
+]

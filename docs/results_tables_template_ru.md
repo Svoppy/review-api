@@ -1,5 +1,8 @@
 # Шаблоны итоговых таблиц результатов
 
+Текущий canonical filled appendix для snapshot-артефактов находится в [article_results_package_ru.md](/Users/diaskazikhanov/Desktop/aitu/nirm/docs/article_results_package_ru.md).
+Этот файл оставлен как planning template для расширенного rerun, когда появятся полные robustness и ablation tables за пределами текущего pilot package.
+
 Использовать этот файл как заготовку для финального заполнения после завершения прогонов.
 
 ## Таблица 1. Сравнение датасетов

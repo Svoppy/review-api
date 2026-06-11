@@ -52,10 +52,22 @@ class MultiTaskTransformer(nn.Module):
         self,
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor,
+        token_type_ids: torch.Tensor | None = None,
         sentiment_labels: torch.Tensor | None = None,
         authenticity_labels: torch.Tensor | None = None,
     ) -> MultiTaskOutput:
-        encoded = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
+        encoder_kwargs = {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+        }
+        if token_type_ids is not None:
+            encoder_kwargs["token_type_ids"] = token_type_ids
+
+        try:
+            encoded = self.encoder(**encoder_kwargs)
+        except TypeError:
+            encoder_kwargs.pop("token_type_ids", None)
+            encoded = self.encoder(**encoder_kwargs)
         pooled = self.dropout(self._pool(encoded.last_hidden_state, attention_mask))
 
         sentiment_logits = self.sentiment_head(pooled)

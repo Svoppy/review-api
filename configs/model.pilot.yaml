@@ -15,17 +15,28 @@ train:
   batch_size: 8
   learning_rate: 2.0e-5
   weight_decay: 0.01
-  epochs: 1
+  epochs: 4
+  class_weight_mode: balanced
+  train_sampler: source_balanced
+  early_stopping_patience: 2
   random_state: 42
   device: cpu
   output_dir: models/experiments/pilot-multitask
   export_dir: models/pilot-latest
+analysis:
+  robustness_slice_fields:
+    - source
+    - domain
+    - language
+  robustness_min_support: 10
 single_task:
   train:
     batch_size: 8
     learning_rate: 2.0e-5
     weight_decay: 0.01
-    epochs: 1
+    epochs: 4
+    class_weight_mode: balanced
+    early_stopping_patience: 2
     random_state: 42
     device: cpu
   tasks:

@@ -143,6 +143,8 @@ def test_build_arg_parser_supports_single_task_command() -> None:
     assert args.task == "sentiment"
     assert args.config_path == "configs/model.multitask.yaml"
     assert args.random_state is None
+    assert args.split_random_state is None
+    assert args.train_random_state is None
 
 
 def test_single_task_config_prefers_cli_random_state_over_yaml() -> None:
@@ -156,7 +158,7 @@ def test_single_task_config_prefers_cli_random_state_over_yaml() -> None:
             },
         },
         "sentiment",
-        random_state=23,
+        train_random_state=23,
     )
 
     assert config.random_state == 23
@@ -173,27 +175,95 @@ def test_single_task_config_uses_yaml_random_state_when_cli_missing() -> None:
             },
         },
         "sentiment",
-        random_state=None,
+        train_random_state=13,
     )
 
     assert config.random_state == 13
+
+
+def test_split_random_state_prefers_dedicated_cli_flag() -> None:
+    module = importlib.import_module("reviewguard.training.__main__")
+    split_seed = module._resolve_split_random_state(
+        31,
+        23,
+        {
+            "train": {"split_random_state": 19, "random_state": 17},
+        },
+    )
+
+    assert split_seed == 31
 
 
 def test_split_random_state_uses_config_when_cli_missing() -> None:
     module = importlib.import_module("reviewguard.training.__main__")
     split_seed = module._resolve_split_random_state(
         None,
+        None,
         {
-            "train": {"random_state": 7},
+            "train": {"split_random_state": 5, "random_state": 7},
             "single_task": {
-                "train": {"random_state": 11},
-                "tasks": {"sentiment": {"random_state": 13}},
+                "train": {"split_random_state": 9, "random_state": 11},
+                "tasks": {"sentiment": {"split_random_state": 15, "random_state": 13}},
             },
         },
         task="sentiment",
     )
 
-    assert split_seed == 13
+    assert split_seed == 15
+
+
+def test_train_random_state_uses_dedicated_cli_flag_before_legacy() -> None:
+    module = importlib.import_module("reviewguard.training.__main__")
+    train_seed = module._resolve_train_random_state(
+        41,
+        29,
+        {
+            "train": {"train_random_state": 17, "random_state": 13},
+        },
+    )
+
+    assert train_seed == 41
+
+
+def test_train_random_state_uses_config_when_cli_missing() -> None:
+    module = importlib.import_module("reviewguard.training.__main__")
+    train_seed = module._resolve_train_random_state(
+        None,
+        None,
+        {
+            "train": {"train_random_state": 5, "random_state": 7},
+            "single_task": {
+                "train": {"train_random_state": 9, "random_state": 11},
+                "tasks": {"sentiment": {"train_random_state": 15, "random_state": 13}},
+            },
+        },
+        task="sentiment",
+    )
+
+    assert train_seed == 15
+
+
+def test_analysis_protocol_uses_article_grade_defaults_and_config_overrides() -> None:
+    module = importlib.import_module("reviewguard.training.__main__")
+
+    default_protocol = module._analysis_protocol()
+    overridden_protocol = module._analysis_protocol(
+        {
+            "analysis": {
+                "robustness_slice_fields": ["source", "language"],
+                "robustness_min_support": 25,
+            }
+        }
+    )
+
+    assert default_protocol == {
+        "robustness_slice_fields": ("source", "domain", "language"),
+        "robustness_min_support": 10,
+    }
+    assert overridden_protocol == {
+        "robustness_slice_fields": ("source", "language"),
+        "robustness_min_support": 25,
+    }
 
 
 def test_split_unified_records_preserves_all_examples() -> None:
@@ -221,6 +291,106 @@ def test_split_unified_records_preserves_all_examples() -> None:
     assert len(split["valid"]) == 2
     assert len(split["test"]) == 2
     assert len(split["train"]) + len(split["valid"]) + len(split["test"]) == len(records)
+
+
+def test_split_unified_records_keeps_duplicate_texts_in_one_split() -> None:
+    records = [
+        {
+            "record_id": f"id-{index}",
+            "text": "Repeated review text" if index in {0, 1} else f"review-{index}",
+            "source": "demo",
+            "language": "en",
+            "domain": "ecommerce",
+            "sentiment_label": "positive" if index % 2 == 0 else "negative",
+            "authenticity_label": "authentic" if index % 2 == 0 else "fake",
+        }
+        for index in range(8)
+    ]
+
+    split = split_unified_records(records, random_state=13)
+    locations = {
+        split_name
+        for split_name, rows in split.items()
+        for row in rows
+        if row["text"] == "Repeated review text"
+    }
+
+    assert len(locations) == 1
+
+
+def test_split_unified_records_groups_duplicate_texts_across_sources() -> None:
+    records = [
+        {
+            "record_id": "ru-1",
+            "text": "Repeated review text",
+            "source": "rureviews",
+            "language": "ru",
+            "domain": "ecommerce",
+            "sentiment_label": "positive",
+            "authenticity_label": None,
+        },
+        {
+            "record_id": "maide-1",
+            "text": "Repeated review text",
+            "source": "maide_up",
+            "language": "en",
+            "domain": "hospitality",
+            "sentiment_label": "positive",
+            "authenticity_label": "fake",
+        },
+        {
+            "record_id": "ru-2",
+            "text": "unique-a",
+            "source": "rureviews",
+            "language": "ru",
+            "domain": "ecommerce",
+            "sentiment_label": "negative",
+            "authenticity_label": None,
+        },
+        {
+            "record_id": "maide-2",
+            "text": "unique-b",
+            "source": "maide_up",
+            "language": "en",
+            "domain": "hospitality",
+            "sentiment_label": "negative",
+            "authenticity_label": "authentic",
+        },
+        {
+            "record_id": "ru-3",
+            "text": "unique-c",
+            "source": "rureviews",
+            "language": "ru",
+            "domain": "ecommerce",
+            "sentiment_label": "positive",
+            "authenticity_label": None,
+        },
+        {
+            "record_id": "maide-3",
+            "text": "unique-d",
+            "source": "maide_up",
+            "language": "en",
+            "domain": "hospitality",
+            "sentiment_label": "positive",
+            "authenticity_label": "fake",
+        },
+    ]
+
+    split = split_unified_records(
+        records,
+        train_size=0.5,
+        valid_size=0.25,
+        test_size=0.25,
+        random_state=11,
+    )
+    locations = {
+        split_name
+        for split_name, rows in split.items()
+        for row in rows
+        if row["text"] == "Repeated review text"
+    }
+
+    assert len(locations) == 1
 
 
 def test_training_cli_module_import_does_not_require_torch() -> None:

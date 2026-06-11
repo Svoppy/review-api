@@ -1,65 +1,67 @@
 # Чеклист доведения статьи до подачи
 
-Дата: `2026-05-28`
+Дата обновления: `2026-06-11`
 
 ## 1. Что уже готово
 
-- есть рабочая исследовательская тема и внятная постановка задачи;
-- есть pipeline `data -> training -> export -> API -> web UI`;
-- есть baseline и scaffolds для `single-task` и `multitask`;
-- есть pilot baseline на реальных публичных данных;
-- есть улучшенный русский текст статьи: `docs/article_final_ru.md`.
+- есть рабочий end-to-end pipeline `data -> training -> export -> API -> web UI`;
+- есть complete pilot package: `baseline`, `single-task`, `multitask`, `3-seed` summary, statistics, task ablation;
+- есть leakage-aware split logic и article-grade dataset audit;
+- есть локально собранные корпуса `joint_reviews.current.jsonl` и `joint_reviews.balanced6k.jsonl`;
+- есть основной русский текст статьи: [article_final_ru.md](/Users/diaskazikhanov/Desktop/aitu/nirm/docs/article_final_ru.md).
 
 ## 2. Что обязательно закрыть перед подачей
 
 ### Эксперименты
 
-- прогнать `single-task Transformer` на pilot protocol;
-- прогнать `multitask Transformer` на pilot protocol;
-- прогнать финальные эксперименты на полном наборе локально подготовленных данных;
-- получить итоговые `train_report.json` для всех основных прогонов;
-- собрать итоговую таблицу `baseline vs single-task vs multitask`.
+- перегенерировать ключевые baseline / single-task / multitask runs под текущим протоколом `configs/model.pilot.yaml`;
+- либо сузить article scope до bounded pilot, либо добавить в реальные прогоны хотя бы один не-`MAiDE-up` authenticity benchmark;
+- собрать article-facing robustness package по `source`, `domain`, `language`;
+- закрыть или снять из narrative ablations `source-balanced vs naive` и `loss_weights`.
 
 ### Анализ результатов
 
-- добавить confusion matrices;
-- сделать краткий error analysis по false positives и false negatives;
-- выполнить ablation по `loss_weights`;
-- описать влияние class imbalance и heterogeneous labels;
-- при возможности дать результаты на нескольких `random_state`.
+- вынести в статью или приложение confusion matrices;
+- добавить краткий error analysis;
+- держать в актуальном состоянии canonical appendix [article_results_package_ru.md](/Users/diaskazikhanov/Desktop/aitu/nirm/docs/article_results_package_ru.md);
+- явно показать class support и ограничения по `neutral` / authenticity coverage.
 
-### Оформление статьи
+### Воспроизводимость
 
-- проверить соответствие требованиям вуза или журнала;
-- унифицировать стиль терминов: `тональность`, `достоверность`, `подлинность`, `authenticity`;
-- выровнять библиографию в одном стандарте;
-- добавить сведения об авторах, организации и УДК, если это требуется форматом;
-- вставить финальные рисунки и таблицы;
-- заменить формулировки вида `ожидается` на фактические результаты там, где эксперименты завершены.
+- синхронизировать `docs/reproducibility_note_ru.md`, `docs/tested_environment_ru.md`, runbook и README с фактическим snapshot;
+- зафиксировать один environment of record для article results;
+- убрать или переписать команды, которые требуют отсутствующих в snapshot raw paths без явной оговорки.
+
+### Текст статьи
+
+- привести backbone narrative в соответствие с фактически reported pilot results;
+- заменить plan-like формулировки на completed-study wording там, где результаты уже есть;
+- не оставлять скрытых broad claims про robustness или multitask superiority.
 
 ## 3. Что не надо делать
 
-- не придумывать финальные метрики без завершённых прогонов;
-- не подавать pilot baseline как основной итог диссертации;
-- не смешивать silver labels и gold labels без отдельного пояснения;
-- не утверждать, что explanation layer решает задачу интерпретируемости полностью;
-- не делать сильных заявлений о превосходстве multitask-модели без итогового сравнения.
+- не подавать текущий pilot как completed multi-benchmark study;
+- не выдавать `MAiDE-up`-центричный authenticity result за общий e-commerce authenticity benchmark;
+- не писать, что текущий пакет уже валидирует одинаково human deception, silver fraud и AI-generated reviews;
+- не называть transparency-layer полноценной explainability system;
+- не придумывать финальные цифры без новых прогонов под текущим протоколом.
 
-## 4. Минимальный комплект для сильной защиты
+## 4. Минимальный комплект для сильной подачи
 
-- финальная статья `docs/article_final_ru.md`, обновлённая итоговыми таблицами;
-- таблица сравнения всех моделей;
-- схема архитектуры;
-- 2-4 ключевых рисунка или матрицы ошибок;
-- отдельный слайд или раздел с ограничениями исследования;
-- воспроизводимый список команд запуска и конфигураций.
+- финальная статья `docs/article_final_ru.md`, синхронизированная с фактическими result artifacts;
+- canonical appendix `docs/article_results_package_ru.md`, собранный из реальных report artifacts;
+- таблица сравнения `baseline / single-task / multitask`;
+- robustness table по `source/domain/language`;
+- confusion matrices и краткий error analysis;
+- limitations / threats to validity section;
+- список воспроизводимых команд для основного experimental path.
 
 ## 5. Критерий готовности
 
-Работу можно считать готовой к подаче, если выполнены все условия:
+Работу можно считать близкой к `submission-ready`, если выполнены все условия:
 
-1. есть завершённые baseline, single-task и multitask results;
-2. статья содержит не только постановку, но и доказательные таблицы;
-3. каждый главный тезис в разделе результатов опирается на конкретную метрику или рисунок;
-4. ограничения исследования описаны явно;
-5. репозиторий и документы позволяют воспроизвести основную экспериментальную схему.
+1. central experimental claims опираются на реальные артефакты в `reports/` и `models/`;
+2. статья не обещает больше, чем покрывает текущий benchmark bundle;
+3. reproducibility docs совпадают с фактической средой и командами;
+4. pilot package либо честно позиционирован как bounded study, либо расширен до более широкого authenticity benchmark;
+5. все главные выводы в разделе результатов поддержаны таблицей, метрикой или рисунком в статье или в canonical appendix.

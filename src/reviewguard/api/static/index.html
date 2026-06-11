@@ -151,6 +151,11 @@
         font-size: 0.92rem;
       }
 
+      .pill.warn {
+        background: rgba(217, 119, 6, 0.12);
+        color: #9a6700;
+      }
+
       .probability-list {
         display: grid;
         gap: 10px;
@@ -185,6 +190,13 @@
         margin: 0;
         padding-left: 20px;
         color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .microcopy {
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 0.92rem;
         line-height: 1.6;
       }
 
@@ -276,13 +288,22 @@
 
           status.textContent = "Analysis complete.";
           const explanation = payload.explanation || {};
+          const research = payload.research_context || {};
           const notes = Array.isArray(explanation.notes) ? explanation.notes : [];
+          const riskFlags = Array.isArray(explanation.risk_flags) ? explanation.risk_flags : [];
+          const researchWarnings = Array.isArray(research.warnings) ? research.warnings : [];
           const sentimentEntries = Array.isArray(explanation.sentiment_top_probabilities)
             ? explanation.sentiment_top_probabilities
             : [];
           const authenticityEntries = Array.isArray(explanation.authenticity_top_probabilities)
             ? explanation.authenticity_top_probabilities
             : [];
+          const sources = research.sources && typeof research.sources === "object"
+            ? Object.entries(research.sources)
+            : [];
+          const robustnessSummary = research.robustness_summary && typeof research.robustness_summary === "object"
+            ? research.robustness_summary
+            : {};
           results.innerHTML = `
             <div class="summary-grid">
               <section class="result-card">
@@ -302,6 +323,9 @@
               <span class="pill">Tokens scored: ${escapeHtml(explanation.token_count ?? "n/a")}</span>
               <span class="pill">Limit: ${escapeHtml(explanation.max_length ?? "n/a")}</span>
               <span class="pill">${explanation.truncated ? "Input truncated" : "Full input scored"}</span>
+              <span class="pill">Sentiment margin: ${Number(explanation.sentiment_margin ?? 0).toFixed(3)}</span>
+              <span class="pill">Authenticity margin: ${Number(explanation.authenticity_margin ?? 0).toFixed(3)}</span>
+              ${riskFlags.map((flag) => `<span class="pill warn">${escapeHtml(flag)}</span>`).join("")}
             </div>
             <div class="probability-grid">
               ${renderProbabilityCard("Sentiment distribution", sentimentEntries)}
@@ -312,6 +336,28 @@
               <ul class="notes">
                 ${notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}
               </ul>
+            </section>
+            <section class="result-card" style="margin-top: 14px;">
+              <p class="eyebrow">Research Context</p>
+              <p class="result-value">
+                Scope: <strong>${escapeHtml(research.scope ?? "unknown")}</strong><br />
+                Training records: ${escapeHtml(research.training_records ?? "n/a")}<br />
+                Sentiment-labeled: ${escapeHtml(research.sentiment_labeled ?? "n/a")}<br />
+                Authenticity-labeled: ${escapeHtml(research.authenticity_labeled ?? "n/a")}
+              </p>
+              <div class="microcopy">
+                Sources: ${sources.length ? sources.map(([name, count]) => `${escapeHtml(name)} (${escapeHtml(count)})`).join(", ") : "n/a"}
+              </div>
+              <div class="microcopy">
+                Robustness proxy:
+                sentiment source mean macro-F1 = ${escapeHtml(robustnessSummary.sentiment?.mean_source_macro_f1 ?? "n/a")},
+                authenticity source mean macro-F1 = ${escapeHtml(robustnessSummary.authenticity?.mean_source_macro_f1 ?? "n/a")}
+              </div>
+              ${researchWarnings.length ? `
+                <ul class="notes" style="margin-top: 10px;">
+                  ${researchWarnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}
+                </ul>
+              ` : ""}
             </section>
           `;
           results.style.display = "block";

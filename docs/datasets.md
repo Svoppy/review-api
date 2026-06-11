@@ -2,7 +2,13 @@
 
 Verified on `2026-05-21`.
 
-Repository status note: the dataset recommendations below describe the intended dissertation stack. The current repository snapshot contains first-class normalization adapters only for `RuReviews`, `Perekrestok Reviews`, `OpSpam`, and `MAiDE-up`. Other datasets listed here should be treated as planned or optional extensions until dedicated loaders are implemented.
+Repository status note: the dataset recommendations below describe the intended dissertation stack. The current repository snapshot is narrower:
+
+- local raw and processed preparation is currently available for `RuReviews`, `Perekrestok Reviews`, and `MAiDE-up`
+- `OpSpam` and `FraudYelpDataset` normalization adapters exist in code, but no local copies are prepared in this workspace snapshot
+- `FraudYelpDataset` support currently assumes a local review-text export rather than a raw graph dump
+
+As a result, the current reported pilot benchmark should not be described as if `OpSpam` or `FraudDataset` were already part of the completed experiments.
 
 ## Recommendation summary
 
@@ -85,7 +91,7 @@ Use `RuReviews` as the primary benchmark and `Perekrestok Reviews` as the main i
 
 ### For authenticity
 
-Use two tracks:
+Use two tracks in the intended full benchmark:
 
 - `FraudYelpDataset` for the main realistic benchmark
 - `OpSpam` for the clean text-only benchmark
@@ -108,6 +114,24 @@ This lets us train a multitask model even when some examples are labeled for onl
 - main authenticity benchmark: `FraudYelpDataset`
 - text-only authenticity benchmark: `OpSpam`
 - AI-fake benchmark: `MAiDE-up`
+
+## Current repository-ready stack
+
+- primary sentiment source already prepared locally: `RuReviews`
+- additional in-domain sentiment source already prepared locally: `Perekrestok Reviews`
+- authenticity source already prepared locally: `MAiDE-up`
+- code adapters present but local corpora absent: `OpSpam`, `FraudYelpDataset`
+
+## FraudYelp loader contract
+
+The current repository integration for `FraudYelpDataset` is intentionally conservative.
+
+- supported input: a local `jsonl`, `json`, or `csv` export that already contains review text
+- supported directory mode: the loader will look for files such as `reviews.jsonl`, `reviews.json`, `reviews.csv`, `fraudyelp.jsonl`, or `yelp_reviews.jsonl`
+- required fields: one text field (`text`, `review`, `review_text`, `review_content`, `content`, `comment`, or `body`) and one fraud label field (`authenticity`, `authenticity_label`, `fraud_label`, `label`, `class`, `y`, or `is_fraud`)
+- optional fields: `rating`, `business_id`, `user_id`, `review_id`, `split`, `language`, `domain`
+
+This means the repository now has a first-class adapter, but it still does not claim that any arbitrary upstream DGL artifact is directly consumable by the text pipeline without a review-text export step.
 
 ## Scientific caution
 

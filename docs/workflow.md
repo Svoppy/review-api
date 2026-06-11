@@ -10,6 +10,20 @@ The intended project workflow is:
 4. export the chosen checkpoint
 5. run the API and web UI against a multitask checkpoint
 
+To make one exported multitask checkpoint active for the app:
+
+```bash
+PYTHONPATH=src .venv314/bin/python scripts/activate_checkpoint.py \
+  --source models/pilot1k-multitask \
+  --target models/latest
+```
+
+To verify the active checkpoint through the application stack without starting an external server process:
+
+```bash
+PYTHONPATH=src .venv314/bin/python scripts/api_smoke.py
+```
+
 ## Unified schema
 
 Each processed record should contain:
@@ -38,9 +52,10 @@ Supported adapters:
 - `rureviews`
 - `perekrestok`
 - `opspam`
+- `fraudyelp`
 - `maide_up`
 
-Planned datasets mentioned elsewhere in the research notes, such as `FraudYelpDataset`, `KazSAnDRA`, and `Amazon Reviews 2023`, are not current first-class normalization adapters in this repository snapshot.
+`FraudYelpDataset` is now supported through a local review-text export adapter, but the repository still does not claim that arbitrary raw graph dumps are directly consumable without that export step. Planned datasets mentioned elsewhere in the research notes, such as `KazSAnDRA` and `Amazon Reviews 2023`, are still not current first-class normalization adapters in this repository snapshot.
 
 To build a shared multitask corpus from several processed files:
 

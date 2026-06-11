@@ -4,11 +4,11 @@
 
 В статье рассматривается задача совместного анализа тональности и достоверности пользовательских отзывов в электронной коммерции. Актуальность работы определяется тем, что современные e-commerce платформы зависят не только от общей эмоциональной оценки отзывов, но и от их подлинности: даже высокоточная sentiment-модель может давать искажённый аналитический сигнал, если значимая доля входных текстов является манипулятивной, заказной или автоматически сгенерированной. На практике sentiment analysis и review authenticity detection чаще всего реализуются как отдельные пайплайны, что увеличивает стоимость инференса, дублирует инфраструктуру и не позволяет использовать положительный перенос знаний между взаимосвязанными задачами.
 
-Для устранения этого ограничения предлагается мультитаск-подход на основе общей трансформерной архитектуры кодировщика с двумя классификационными головами: для определения тональности отзыва и для определения его достоверности. В качестве экспериментальной базы используются реальные и общедоступные датасеты разных типов: русскоязычные e-commerce отзывы (`RuReviews`, `Perekrestok Reviews`), классический корпус обманных отзывов `OpSpam`, benchmark `FraudDataset (Yelp)` и современный мультиязычный набор `MAiDE-up` для анализа AI-generated fake reviews. Поскольку в публичном поле отсутствует единый крупный датасет, одновременно покрывающий обе задачи с надёжной разметкой, в работе вводится унифицированная схема частично размеченных данных, позволяющая объединять разнородные корпуса в единый обучающий контур.
+Для устранения этого ограничения предлагается мультитаск-подход на основе общей трансформерной архитектуры кодировщика с двумя классификационными головами: для определения тональности отзыва и для определения его достоверности. Полный диссертационный стек данных включает русскоязычные e-commerce отзывы (`RuReviews`, `Perekrestok Reviews`), классический корпус обманных отзывов `OpSpam`, benchmark `FraudDataset (Yelp)` и современный мультиязычный набор `MAiDE-up` для анализа AI-generated fake reviews. Однако текущий завершённый pilot и текущий локальный репозиторный snapshot уже существенно уже: фактически локально подготовлены только `RuReviews`, `Perekrestok Reviews` и `MAiDE-up`, а reported pilot-метрики в статье опираются только на sampled subsets из `RuReviews` и `MAiDE-up`. Поскольку в публичном поле отсутствует единый крупный датасет, одновременно покрывающий обе задачи с надёжной разметкой, в работе вводится унифицированная схема частично размеченных данных, позволяющая объединять разнородные корпуса в единый обучающий контур.
 
-Помимо модельной части, работа включает воспроизводимую прикладную систему `ReviewGuard`, охватывающую нормализацию данных, обучение базовых моделей, single-task и multitask Transformer, экспорт модели, API-инференс и веб-интерфейс для интерактивного анализа отзывов. Реализованный сервис спроектирован так, чтобы возвращать не только предсказания и confidence scores, но и прозрачный слой объяснения на основе ранжированных вероятностей, признака усечения текста и интерпретационных заметок. На текущем этапе pilot-эксперимент на реальных публичных данных подтверждает работоспособность контура и задаёт эмпирическую точку отсчёта для дальнейшего сравнения `baseline -> single-task -> multitask`, однако итоговые трансформерные сравнения ещё требуют завершения.
+Помимо модельной части, работа включает воспроизводимую прикладную систему `ReviewGuard`, охватывающую нормализацию данных, обучение базовых моделей, single-task и multitask Transformer, экспорт модели, API-инференс и веб-интерфейс для интерактивного анализа отзывов. Реализованный сервис возвращает не только предсказания и confidence scores, но и lightweight transparency-слой на основе ранжированных вероятностей, признака усечения текста и интерпретационных заметок; этот слой трактуется как инженерная особенность системы, а не как самостоятельный научный вклад. На текущем этапе pilot-эксперимент на реальных публичных данных уже даёт не только reference point, но и завершённый `3`-seed comparative package: multitask-модель показывает статистически поддержанный выигрыш по authenticity, тогда как по sentiment наблюдается asymmetric transfer и отсутствие общего superiority claim.
 
-**Ключевые слова:** анализ тональности, достоверность отзывов, fake review detection, multitask learning, Transformer, e-commerce, XLM-RoBERTa, веб-система.
+**Ключевые слова:** анализ тональности, достоверность отзывов, fake review detection, multitask learning, Transformer, e-commerce, multilingual encoder, веб-система.
 
 ## 1. Введение
 
@@ -55,7 +55,7 @@
 
 - `H1`: мультитаск-модель не уступает single-task Transformer по качеству sentiment analysis;
 - `H2`: мультитаск-модель превосходит text-only baselines по authenticity detection;
-- `H3`: совместное обучение повышает устойчивость в сценариях mixed corpora и partial supervision.
+- `H3`: совместное обучение повышает robustness только тогда, когда на одном и том же протоколе улучшаются хотя бы два из трёх slice-based показателей: `mean source-wise Macro-F1`, `worst-slice Macro-F1`, `best-minus-worst robustness gap`.
 
 Explainability-oriented API рассматривается как инженерная особенность системы, а не как отдельная научная гипотеза: он повышает практическую прозрачность, но не должен интерпретироваться как завершённое решение задачи объяснимости.
 
@@ -65,8 +65,8 @@ Explainability-oriented API рассматривается как инженер
 
 1. Предлагается единая мультитаск-постановка для совместного анализа тональности и достоверности отзывов в e-commerce при partial supervision.
 2. Вводится унифицированная схема данных, позволяющая объединять разнородные публичные датасеты в одном обучающем и оценочном контуре.
-3. В authenticity-блок включаются несколько современных threat models: deceptive reviews, silver fraud labels и AI-generated fake reviews.
-4. Модельный вклад соединяется с системным: от нормализации и обучения до API и web UI.
+3. В authenticity-блок включаются несколько современных threat models: deceptive reviews, silver fraud labels и AI-generated fake reviews, при этом их семантическая неоднородность явно фиксируется.
+4. Модельный вклад соединяется с системным: от нормализации и обучения до API и web UI, а transparency-слой позиционируется как deployment artifact, а не как explainability contribution.
 
 С точки зрения позиционирования в литературе работа направлена на закрытие разрыва между двумя традиционно раздельными направлениями: `review sentiment modeling` и `review authenticity detection`. В более сжатой публикационной формуле вклад можно описать как shared-encoder multitask architecture + partially labeled heterogeneous corpus design + deployable end-to-end workflow for trust-aware review analysis.
 
@@ -91,7 +91,7 @@ Explainability-oriented API рассматривается как инженер
 
 ### 6.1. Архитектура мультитаск-модели
 
-Предлагаемая модель использует hard parameter sharing. Базовый кодировщик инициализируется на основе `XLM-RoBERTa`, что позволяет работать как с русскоязычными, так и с англоязычными отзывами в одном пространстве представлений. После его работы применяется pooling, а затем два независимых classification heads:
+Предлагаемая модель использует hard parameter sharing. В общей формулировке она опирается на multilingual Transformer encoder, что позволяет работать как с русскоязычными, так и с англоязычными отзывами в одном пространстве представлений. В выполненном pilot-пакете использовалась компактная backbone `distilbert-base-multilingual-cased`, тогда как репозиторий также поддерживает более крупную конфигурацию `XLM-RoBERTa` для следующего этапа экспериментов. После работы кодировщика применяется pooling, а затем два независимых classification heads:
 
 - `Head_s` для sentiment classification;
 - `Head_a` для authenticity detection.
@@ -137,11 +137,11 @@ Explainability-oriented API рассматривается как инженер
 
 ### 6.4. Протокол обучения
 
-Для финальной диссертационной версии экспериментов необходимо зафиксировать не менее трёх random seeds и для основных метрик приводить mean ± std. Train/validation/test splits должны быть leakage-safe: дубликаты и near-duplicates не должны попадать в разные части разбиения, а исходные source partitions следует сохранять там, где это предусмотрено самим датасетом.
+Для репозиторного протокола и для article-facing evaluation минимальным стандартом являются не менее трёх random seeds и отчёт `mean ± std` для основных метрик. Train/validation/test splits должны быть leakage-safe: дубликаты и near-duplicates не должны попадать в разные части разбиения, а исходные source partitions следует сохранять там, где это предусмотрено самим датасетом.
 
-Для обучения на частично размеченных данных каждый minibatch должен вносить в loss только те компоненты, по которым реально есть метки. Поскольку размеры источников сильно отличаются, следует сравнить как минимум две стратегии балансировки: naive concatenation и source-balanced sampling. Дисбаланс authenticity-классов должен компенсироваться через weighted loss, balanced sampling или их комбинацию с явным описанием выбранного варианта в итоговом train report.
+Для обучения на частично размеченных данных каждый minibatch вносит в loss только те компоненты, по которым реально есть метки. Поскольку размеры источников сильно отличаются, article-ready расширение должно включать сравнение как минимум двух стратегий балансировки: naive concatenation и source-balanced sampling. Дисбаланс authenticity-классов должен компенсироваться через weighted loss, balanced sampling или их комбинацию с явным описанием выбранного варианта в итоговом train report.
 
-В текущем pilot-протоколе репозитория использовалась компактная multilingual backbone `distilbert-base-multilingual-cased` с параметрами `max_length=128`, `batch_size=8`, `learning_rate=2e-5`, `weight_decay=0.01`, `epochs=1`, `dropout=0.1`, `random_state=42` и CPU execution. Финальные диссертационные эксперименты должны расширить этот протокол repeated runs, правилами выбора checkpoint и статистически корректным сравнением моделей.
+В исходном сохранённом pilot-пакете использовалась компактная multilingual backbone `distilbert-base-multilingual-cased` с параметрами `max_length=128`, `batch_size=8`, `learning_rate=2e-5`, `weight_decay=0.01`, `epochs=1`, `dropout=0.1`, фиксированным `split_seed=42`, `train_seeds = {11, 21, 42}` и CPU execution. Эти числа и соответствующие article results следует интерпретировать именно как bounded pilot evidence. Обновлённый репозиторный протокол уже поднимает минимальный standard до `epochs=4`, `balanced` class weighting, `source-balanced sampling` для multitask, `early stopping`, split-level audit c duplicate checks и multi-seed reporting как обязательной части evaluation package. Следующий submission-facing rerun должен опираться уже на этот усиленный протокол. Для текущего pilot-пакета уже собраны `mean ± std`, confidence intervals, paired significance-oriented comparisons и отдельный task ablation report.
 
 ## 7. Архитектура веб-системы
 
@@ -161,19 +161,19 @@ Endpoint `/analyze` возвращает:
 - confidence score для достоверности;
 - explanation object.
 
-Слой объяснения intentionally остаётся lightweight и practical. Он содержит ranked task probabilities, token-count information, truncation status и прозрачные интерпретационные заметки. Такой слой полезен для moderation и аналитических сценариев, но в тексте статьи должен трактоваться как transparency aid, а не как fully causal explanation framework.
+Слой объяснения intentionally остаётся lightweight и practical. Он содержит ranked task probabilities, token-count information, truncation status, margin-based risk flags, provenance summary training corpus и прозрачные интерпретационные заметки. Такой слой полезен для moderation и аналитических сценариев, но в тексте статьи должен трактоваться как transparency aid, а не как fully causal explanation framework. Поэтому он должен быть описан в system section или appendix и не должен входить в перечень основных научных гипотез.
 
 ## 8. Дизайн экспериментов
 
 ### 8.1. Экспериментальные сценарии
 
-Полный план оценки включает:
+Полный план оценки для article-ready расширения включает:
 
 1. `RuReviews` с classical baseline для sentiment;
-2. `OpSpam` с classical baseline для authenticity;
-3. single-task Transformer experiments для каждой задачи по отдельности;
-4. multitask training на merged partially labeled corpus;
-5. robustness evaluation на смешанных authenticity benchmarks, включая `FraudDataset` и `MAiDE-up`;
+2. single-task Transformer experiments для каждой задачи по отдельности;
+3. multitask training на merged partially labeled corpus;
+4. multi-seed comparison `baseline / single-task / multitask` на фиксированном pilot split;
+5. robustness evaluation на смешанных authenticity benchmarks, включая `FraudDataset` и `MAiDE-up`, после полной локальной интеграции;
 6. domain transfer analysis с использованием `Perekrestok Reviews`.
 
 ### 8.2. Метрики
@@ -189,9 +189,16 @@ Endpoint `/analyze` возвращает:
 
 Для authenticity detection основной интерпретационный акцент следует делать на `Macro-F1`, особенно при дисбалансе классов.
 
+Для `H3` одной aggregate-метрики недостаточно. Robustness должна быть операционализирована через:
+
+- `mean Macro-F1 across source slices`;
+- `worst-slice Macro-F1`;
+- `best-minus-worst robustness gap`;
+- при наличии данных, `leave-one-source-out delta`.
+
 ### 8.3. Планируемые аналитические срезы
 
-Помимо агрегированных метрик, в финальной версии необходимо включить:
+Помимо агрегированных метрик, submission-facing расширение должно включить:
 
 - confusion-matrix analysis по обеим задачам;
 - comparison tables `baseline / single-task / multitask`;
@@ -204,6 +211,7 @@ Endpoint `/analyze` возвращает:
 Поскольку unified corpus объединяет разные языки, домены и механизмы разметки, протокол оценки должен явно проверять отсутствие shortcut learning. Желательно дополнительно отчитаться по следующим сценариям:
 
 - source-stratified evaluation;
+- slice-based robustness tables по `source`, `domain` и `language`;
 - leave-one-dataset-out authenticity testing, где это возможно;
 - language-aware sentiment evaluation;
 - calibration analysis для confidence scores;
@@ -218,7 +226,7 @@ Endpoint `/analyze` возвращает:
 | Классические работы по deceptive review detection | обычно один домен | как правило, нет | редко | ограничен | обычно нет |
 | Review sentiment benchmarks | e-commerce отзывы | нет | не требуется | ограничен | обычно нет |
 | Работы по AI-generated review detection | synthetic / hospitality | редко | редко | частично | обычно нет |
-| Настоящая работа | heterogeneous public corpora | да | да | запланирован как обязательный блок | да |
+| Настоящая работа | heterogeneous public corpora | да | да | частично реализован в текущем snapshot, полностью обязателен для расширенной версии | да |
 
 Именно сочетание joint learning, heterogeneous partially labeled corpora и web-oriented deployment pipeline является заявленным исследовательско-инженерным отличием настоящей работы. Однако в финальной версии статьи этот тезис должен подтверждаться не только архитектурой, но и завершёнными экспериментальными сравнениями.
 
@@ -226,16 +234,18 @@ Endpoint `/analyze` возвращает:
 
 Текущий репозиторий уже поддерживает воспроизводимый pilot-эксперимент на реальных данных. Локальный pilot corpus был собран из `1 000` семплированных записей `RuReviews` и `1 000` семплированных записей `MAiDE-up` с детерминированным seed `42`. Итоговый joint pilot set содержит `2 000` отзывов, из которых все размечены по sentiment и `1 000` размечены по authenticity. Разбиение на train/validation/test осуществлялось через project CLI по схеме `80/10/10`.
 
-В качестве первой эмпирической точки отсчёта была обучена baseline-модель `TF-IDF + Logistic Regression`. Таблица 1 содержит метрики на test split.
+В исходной pilot-версии первой эмпирической точкой отсчёта служила baseline-модель `TF-IDF + Logistic Regression`. Однако текущий репозиторный пакет уже включает и baseline, и single-task, и multitask результаты, а также repeated runs по `3` train seeds на фиксированном split.
 
 | Задача | Accuracy | Macro-F1 | Weighted-F1 | Support |
 |---|---:|---:|---:|---:|
 | Sentiment | `0.8000` | `0.7368` | `0.8002` | `200` |
 | Authenticity | `0.8000` | `0.7999` | `0.7999` | `100` |
 
-Для корректной интерпретации этих чисел pilot baseline должен рассматриваться только как нижняя эмпирическая точка отсчёта. Без majority baseline, class distribution table, confusion matrices и повторных прогонов по нескольким seeds данные значения не могут служить основанием для сильных выводов о преимуществах архитектуры. Тем не менее уже сейчас они показывают, что pipeline способен обрабатывать реальные публичные данные, формировать joint pilot corpus и выдавать воспроизводимые reference metrics.
+Для корректной интерпретации этих baseline-чисел их нужно рассматривать как нижнюю эмпирическую точку отсчёта, а не как центральный результат статьи. Ключевой вывод текущей версии строится уже на multi-seed package: по authenticity multitask-модель достигает `0.9160 ± 0.0524` macro-F1 против `0.8328 ± 0.1075` у single-task authenticity и `0.7999 ± 0.0000` у baseline; по sentiment multitask-модель достигает `0.5856 ± 0.0665` macro-F1 против `0.5814 ± 0.0526` у single-task sentiment и `0.7368 ± 0.0000` у baseline.
 
-Эти baseline-результаты пока не закрывают центральную гипотезу о преимуществах мультитаск-обучения. Они лишь дают необходимую эмпирическую опору: pipeline уже способен ingest real public corpora, нормализовать их, собирать joint partially labeled samples и обучать воспроизводимые reference models. Следующий обязательный шаг — single-task и multitask Transformer comparison на том же pilot protocol, а затем на полном наборе данных.
+Статистический слой pilot-пакета уточняет этот вывод. Для authenticity разница `multitask vs single-task` по macro-F1 составляет `+0.0832` при `95% CI [0.0447, 0.1274]` и `p=0.0005`, а `multitask vs baseline` — `+0.1160` при `p=0.0005`. Для sentiment `multitask vs single-task` по macro-F1 даёт лишь `+0.0042` при `95% CI [-0.0915, 0.0954]` и `p=0.9510`, тогда как `multitask vs baseline` даёт значимое ухудшение `-0.1513` при `p=0.0025`. Следовательно, текущий pilot уже поддерживает вывод об asymmetric transfer, но не о всеобщем преимуществе multitask learning.
+
+Для reproducibility-oriented submission package полный набор article-facing таблиц по текущему snapshot автоматически собирается в `docs/article_results_package_ru.md`; туда вынесены сравнение моделей, парные статистические contrasts, multi-seed stability и expanded `balanced6k` audit snapshot.
 
 ## 10. Ограничения и угрозы валидности
 
@@ -245,15 +255,15 @@ Endpoint `/analyze` возвращает:
 
 Во-вторых, русскоязычные e-commerce ресурсы значительно лучше покрывают sentiment, чем authenticity. Поэтому одна ветвь мультитаск-модели может получать гораздо более богатый supervision signal на русском языке, чем другая.
 
-В-третьих, сведение всех authenticity signals к единой бинарной шкале `authentic/fake` неизбежно упрощает различающиеся феномены. Поэтому финальная статья должна содержать dataset-specific reporting и обсуждение того, насколько такая бинарная гармонизация эмпирически оправдана.
+В-третьих, сведение всех authenticity signals к единой бинарной шкале `authentic/fake` неизбежно упрощает различающиеся феномены. Поэтому submission-facing расширение должно содержать dataset-specific reporting и обсуждение того, насколько такая бинарная гармонизация эмпирически оправдана.
 
-В-четвёртых, текущий explanation layer является probabilistic transparency mechanism, а не полноценной causal interpretability system. Он повышает практическую прозрачность, но не снимает проблему объяснимости в строгом теоретическом смысле.
+В-четвёртых, текущий explanation layer является probabilistic transparency mechanism, а не полноценной causal interpretability system. Он повышает практическую прозрачность, но должен интерпретироваться как системный usability artifact, а не как отдельный научный результат.
 
-В-пятых, на текущем этапе в репозитории уже есть real-data baseline results, но центральное transformer-сравнение ещё не завершено. Следовательно, любые сильные утверждения о превосходстве архитектуры должны опираться только на завершённые прогоны `single-task` и `multitask`, а не на архитектурные ожидания.
+В-пятых, на текущем этапе в репозитории уже есть completed pilot comparison с repeated runs, significance-oriented comparisons и task ablation, но всё ещё нет полного benchmark на расширенном наборе корпусов. Следовательно, любые сильные утверждения о превосходстве архитектуры должны ограничиваться текущим pilot scope и не переноситься автоматически на полный диссертационный стек данных.
 
 ## 11. Обсуждение
 
-С научной точки зрения наиболее интересным исходом будет не просто максимум F1 на одном датасете, а анализ transfer dynamics between tasks and domains. Если совместное обучение действительно помогает authenticity detection without harming sentiment quality, это станет сильным аргументом в пользу мультитаск-архитектур для trust-aware review analytics.
+С научной точки зрения наиболее интересным результатом оказывается не просто максимум F1 на одном датасете, а анализ transfer dynamics between tasks and domains. Уже текущий pilot показывает asymmetric transfer: shared encoder статистически помогает authenticity detection, но не даёт убедимого выигрыша по sentiment и остаётся хуже classical baseline.
 
 С инженерной точки зрения важен и другой результат: единый encoder уменьшает сложность инференса по сравнению с двумя независимыми Transformer-сервисами. Для e-commerce платформы это означает меньшую операционную стоимость, единый export format, более простое сопровождение и более чистую интеграцию в moderation или analytics workflow.
 
@@ -265,7 +275,7 @@ Endpoint `/analyze` возвращает:
 
 Научная ценность работы состоит в объединении sentiment analysis, deceptive review detection, AI-generated review detection и multitask Transformer modeling в одной формальной постановке. Практическая ценность выражается в реализации воспроизводимого pipeline от нормализации данных до API deployment и browser-based inference.
 
-На текущем этапе работа уже имеет чёткую методологическую рамку, защищаемую постановку задачи и real-data baseline, подтверждающий жизнеспособность исследовательского контура. Однако статья ещё не должна рассматриваться как полностью завершённый научный результат: для submission-ready версии необходимо завершить transformer comparison, получить итоговые таблицы для `single-task` и `multitask`, провести ablation, robustness analysis и статистически корректное сравнение с baseline.
+На текущем этапе работа уже имеет чёткую методологическую рамку, защищаемую постановку задачи и completed pilot package с multi-seed, significance и ablation, подтверждающий жизнеспособность исследовательского контура. Однако статья всё ещё не должна рассматриваться как полностью завершённый benchmark-level результат: для submission-ready версии необходимы расширенные корпуса, dataset-specific authenticity reporting, source-controlled ablation и полный robustness analysis.
 
 ## Схема системы
 

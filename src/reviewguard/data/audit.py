@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -35,6 +36,16 @@ def _normalized_text(record: Mapping[str, Any]) -> str:
     return str(record.get("text") or "").strip()
 
 
+def _text_fingerprint(record: Mapping[str, Any]) -> str | None:
+    text = _normalized_text(record)
+    if not text:
+        return None
+    normalized = re.sub(r"\s+", " ", text.casefold()).strip()
+    if not normalized:
+        return None
+    return hashlib.sha1(normalized.encode("utf-8")).hexdigest()
+
+
 def _record_identifier(record: Mapping[str, Any]) -> str | None:
     record_id = record.get("record_id")
     if record_id in (None, ""):
@@ -65,6 +76,8 @@ def _task_distribution(records: Iterable[Mapping[str, Any]], *, task: str) -> di
         "counts": counts,
         "proportions": proportions,
         "majority_label": majority_label,
+        "minority_label": min(counts, key=counts.get) if labeled else None,
+        "minimum_class_support": min(counts.values()) if labeled else 0,
     }
 
 
@@ -111,6 +124,14 @@ def _overlap_counts(split: Mapping[str, list[Mapping[str, Any]]]) -> dict[str, d
             for record in records
             if (identifier := _record_identifier(record)) is not None
         }
+    fingerprint_sets = {
+        split_name: {
+            fingerprint
+            for record in split.get(split_name, [])
+            if (fingerprint := _text_fingerprint(record)) is not None
+        }
+        for split_name in split_names
+    }
 
     overlaps: dict[str, dict[str, int]] = {}
     for left, right in (("train", "valid"), ("train", "test"), ("valid", "test")):
@@ -118,8 +139,151 @@ def _overlap_counts(split: Mapping[str, list[Mapping[str, Any]]]) -> dict[str, d
         overlaps[pair_key] = {
             "exact_text_overlap": len(text_sets[left] & text_sets[right]),
             "record_id_overlap": len(id_sets[left] & id_sets[right]),
+            "normalized_text_overlap": len(fingerprint_sets[left] & fingerprint_sets[right]),
         }
     return overlaps
+
+
+def _field_distribution(records: Iterable[Mapping[str, Any]], *, field: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for record in records:
+        key = str(record.get(field) or "unknown")
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def _task_group_coverage(
+    records: Iterable[Mapping[str, Any]],
+    *,
+    task: str,
+    group_field: str,
+) -> dict[str, dict[str, Any]]:
+    label_field = TASK_FIELDS[task]
+    labels = TASK_LABELS[task]
+    grouped: dict[str, dict[str, Any]] = {}
+    for record in records:
+        group_value = str(record.get(group_field) or "unknown")
+        payload = grouped.setdefault(
+            group_value,
+            {
+                "records": 0,
+                "labeled_records": 0,
+                "counts": {label: 0 for label in labels},
+            },
+        )
+        payload["records"] += 1
+        label = record.get(label_field)
+        if label is None:
+            continue
+        payload["labeled_records"] += 1
+        payload["counts"][str(label)] = payload["counts"].get(str(label), 0) + 1
+
+    for payload in grouped.values():
+        labeled_records = int(payload["labeled_records"])
+        payload["label_coverage"] = (
+            labeled_records / int(payload["records"]) if payload["records"] else 0.0
+        )
+    return dict(sorted(grouped.items()))
+
+
+def _label_source_coverage(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+    return {
+        "source": {
+            task: _task_group_coverage(records, task=task, group_field="source")
+            for task in TASK_FIELDS
+        },
+        "language": {
+            task: _task_group_coverage(records, task=task, group_field="language")
+            for task in TASK_FIELDS
+        },
+        "domain": {
+            task: _task_group_coverage(records, task=task, group_field="domain")
+            for task in TASK_FIELDS
+        },
+    }
+
+
+def _duplicate_summary(records: list[Mapping[str, Any]]) -> dict[str, int]:
+    exact_counts: dict[str, int] = {}
+    normalized_counts: dict[str, int] = {}
+    for record in records:
+        exact_text = _normalized_text(record)
+        if exact_text:
+            exact_counts[exact_text] = exact_counts.get(exact_text, 0) + 1
+        fingerprint = _text_fingerprint(record)
+        if fingerprint is not None:
+            normalized_counts[fingerprint] = normalized_counts.get(fingerprint, 0) + 1
+
+    exact_duplicate_rows = sum(count - 1 for count in exact_counts.values() if count > 1)
+    normalized_duplicate_rows = sum(count - 1 for count in normalized_counts.values() if count > 1)
+    return {
+        "exact_duplicate_rows": exact_duplicate_rows,
+        "normalized_duplicate_rows": normalized_duplicate_rows,
+        "unique_exact_texts": len(exact_counts),
+        "unique_normalized_texts": len(normalized_counts),
+    }
+
+
+def _task_warnings(
+    split: Mapping[str, list[Mapping[str, Any]]],
+    *,
+    task: str,
+    minimum_reliable_class_support: int = 20,
+    minimum_reliable_eval_support: int = 100,
+) -> list[str]:
+    warnings: list[str] = []
+    train_distribution = _task_distribution(split.get("train", []), task=task)
+    test_distribution = _task_distribution(split.get("test", []), task=task)
+
+    if test_distribution["labeled_records"] < minimum_reliable_eval_support:
+        warnings.append(
+            f"{task}: test split has only {test_distribution['labeled_records']} labeled examples; "
+            "reported metrics should be treated as pilot-scale and high-variance."
+        )
+
+    min_class_support = int(test_distribution["minimum_class_support"])
+    minority_label = test_distribution["minority_label"]
+    if test_distribution["labeled_records"] and min_class_support < minimum_reliable_class_support:
+        warnings.append(
+            f"{task}: minority class '{minority_label}' has only {min_class_support} test examples; "
+            "macro-F1 is likely unstable."
+        )
+
+    if train_distribution["labeled_records"] and train_distribution["minimum_class_support"] < minimum_reliable_class_support:
+        warnings.append(
+            f"{task}: training split has sparse class coverage (minimum class support "
+            f"{train_distribution['minimum_class_support']}); class balancing or more data is recommended."
+        )
+
+    return warnings
+
+
+def _global_warnings(records: list[Mapping[str, Any]], split: Mapping[str, list[Mapping[str, Any]]]) -> list[str]:
+    warnings: list[str] = []
+    duplicate_summary = _duplicate_summary(records)
+    overlap = _overlap_counts(split)
+
+    if duplicate_summary["normalized_duplicate_rows"] > 0:
+        warnings.append(
+            f"Detected {duplicate_summary['normalized_duplicate_rows']} normalized duplicate rows in the merged corpus; "
+            "group-aware splitting is recommended."
+        )
+
+    if any(pair["normalized_text_overlap"] > 0 for pair in overlap.values()):
+        warnings.append("Normalized text overlap exists across splits, indicating possible leakage.")
+
+    domain_counts = _field_distribution(records, field="domain")
+    language_counts = _field_distribution(records, field="language")
+    if len(domain_counts) > 1:
+        warnings.append(
+            "Corpus mixes multiple domains; cross-domain robustness should be reported separately from aggregate scores."
+        )
+    if len(language_counts) > 1:
+        warnings.append(
+            "Corpus mixes multiple languages; language-aware evaluation is required for strong claims."
+        )
+
+    return warnings
 
 
 def build_dataset_audit_report(
@@ -134,6 +298,11 @@ def build_dataset_audit_report(
         "input_sha256": hash_input_file(input_path) if input_path is not None else None,
         "random_state": random_state,
         "records": len(records),
+        "duplicate_summary": _duplicate_summary(records),
+        "source_distribution": _field_distribution(records, field="source"),
+        "domain_distribution": _field_distribution(records, field="domain"),
+        "language_distribution": _field_distribution(records, field="language"),
+        "label_coverage": _label_source_coverage(records),
         "split_sizes": {name: len(rows) for name, rows in split.items()},
         "split_overlap": _overlap_counts(split),
         "tasks": {},
@@ -144,6 +313,7 @@ def build_dataset_audit_report(
             "train_distribution": _task_distribution(split.get("train", []), task=task),
             "validation_distribution": _task_distribution(split.get("valid", []), task=task),
             "test_distribution": _task_distribution(split.get("test", []), task=task),
+            "warnings": _task_warnings(split, task=task),
             "majority_baseline": {
                 "validation": _majority_baseline_metrics(
                     split.get("train", []),
@@ -158,6 +328,7 @@ def build_dataset_audit_report(
             },
         }
 
+    report["warnings"] = _global_warnings(records, split)
     return report
 
 

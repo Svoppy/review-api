@@ -1,0 +1,401 @@
+{
+  "split_sizes": {
+    "train": 1600,
+    "valid": 200,
+    "test": 200
+  },
+  "summary_rows": [
+    {
+      "model": "baseline",
+      "task": "sentiment",
+      "accuracy": 0.8,
+      "macro_f1": 0.7368421052631579,
+      "weighted_f1": 0.8002105263157895,
+      "precision_macro": 0.7384615384615385,
+      "recall_macro": 0.737037037037037,
+      "support": 200
+    },
+    {
+      "model": "single_task_sentiment",
+      "task": "sentiment",
+      "accuracy": 0.805,
+      "macro_f1": 0.5428477826056969,
+      "weighted_f1": 0.7940619180633146,
+      "precision_macro": 0.5427178800672777,
+      "recall_macro": 0.5496632996632996,
+      "support": 200
+    },
+    {
+      "model": "multitask",
+      "task": "sentiment",
+      "accuracy": 0.7,
+      "macro_f1": 0.5885168336357837,
+      "weighted_f1": 0.6932270862853307,
+      "precision_macro": 0.6050729027828264,
+      "recall_macro": 0.6034511784511785,
+      "support": 200
+    },
+    {
+      "model": "baseline",
+      "task": "authenticity",
+      "accuracy": 0.8,
+      "macro_f1": 0.7999199679871949,
+      "weighted_f1": 0.7999199679871949,
+      "precision_macro": 0.8004807692307692,
+      "recall_macro": 0.8,
+      "support": 100
+    },
+    {
+      "model": "single_task_authenticity",
+      "task": "authenticity",
+      "accuracy": 0.73,
+      "macro_f1": 0.7087692805522597,
+      "weighted_f1": 0.7087692805522597,
+      "precision_macro": 0.8246753246753247,
+      "recall_macro": 0.73,
+      "support": 100
+    },
+    {
+      "model": "multitask",
+      "task": "authenticity",
+      "accuracy": 0.86,
+      "macro_f1": 0.8579545454545454,
+      "weighted_f1": 0.8579545454545454,
+      "precision_macro": 0.8820033955857385,
+      "recall_macro": 0.86,
+      "support": 100
+    }
+  ],
+  "task_details": {
+    "baseline.sentiment": {
+      "model": "baseline",
+      "task": "sentiment",
+      "labels": [
+        "negative",
+        "neutral",
+        "positive"
+      ],
+      "metrics": {
+        "accuracy": 0.8,
+        "macro_f1": 0.7368421052631579,
+        "weighted_f1": 0.8002105263157895,
+        "precision_macro": 0.7384615384615385,
+        "recall_macro": 0.737037037037037,
+        "support": 200,
+        "per_label_support": {
+          "negative": 99,
+          "neutral": 5,
+          "positive": 96
+        },
+        "confusion_matrix": [
+          [
+            77,
+            0,
+            22
+          ],
+          [
+            0,
+            3,
+            2
+          ],
+          [
+            14,
+            2,
+            80
+          ]
+        ]
+      },
+      "classwise": [
+        {
+          "label": "negative",
+          "precision": 0.8461538461538461,
+          "recall": 0.7777777777777778,
+          "f1": 0.8105263157894737,
+          "support": 99
+        },
+        {
+          "label": "neutral",
+          "precision": 0.6,
+          "recall": 0.6,
+          "f1": 0.6,
+          "support": 5
+        },
+        {
+          "label": "positive",
+          "precision": 0.7692307692307693,
+          "recall": 0.8333333333333334,
+          "f1": 0.8,
+          "support": 96
+        }
+      ],
+      "sample_size": 200
+    },
+    "single_task_sentiment.sentiment": {
+      "model": "single_task_sentiment",
+      "task": "sentiment",
+      "labels": [
+        "negative",
+        "neutral",
+        "positive"
+      ],
+      "metrics": {
+        "accuracy": 0.805,
+        "macro_f1": 0.5428477826056969,
+        "weighted_f1": 0.7940619180633146,
+        "precision_macro": 0.5427178800672777,
+        "recall_macro": 0.5496632996632996,
+        "support": 200,
+        "per_label_support": {
+          "negative": 99,
+          "neutral": 5,
+          "positive": 96
+        },
+        "confusion_matrix": [
+          [
+            89,
+            0,
+            10
+          ],
+          [
+            4,
+            0,
+            1
+          ],
+          [
+            24,
+            0,
+            72
+          ]
+        ]
+      },
+      "classwise": [
+        {
+          "label": "negative",
+          "precision": 0.7606837606837606,
+          "recall": 0.898989898989899,
+          "f1": 0.8240740740740741,
+          "support": 99
+        },
+        {
+          "label": "neutral",
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 5
+        },
+        {
+          "label": "positive",
+          "precision": 0.8674698795180723,
+          "recall": 0.75,
+          "f1": 0.8044692737430168,
+          "support": 96
+        }
+      ],
+      "sample_size": 200
+    },
+    "multitask.sentiment": {
+      "model": "multitask",
+      "task": "sentiment",
+      "labels": [
+        "negative",
+        "neutral",
+        "positive"
+      ],
+      "metrics": {
+        "accuracy": 0.7,
+        "macro_f1": 0.5885168336357837,
+        "weighted_f1": 0.6932270862853307,
+        "precision_macro": 0.6050729027828264,
+        "recall_macro": 0.6034511784511785,
+        "support": 200,
+        "per_label_support": {
+          "negative": 99,
+          "neutral": 5,
+          "positive": 96
+        },
+        "confusion_matrix": [
+          [
+            86,
+            3,
+            10
+          ],
+          [
+            2,
+            2,
+            1
+          ],
+          [
+            43,
+            1,
+            52
+          ]
+        ]
+      },
+      "classwise": [
+        {
+          "label": "negative",
+          "precision": 0.6564885496183206,
+          "recall": 0.8686868686868687,
+          "f1": 0.7478260869565218,
+          "support": 99
+        },
+        {
+          "label": "neutral",
+          "precision": 0.3333333333333333,
+          "recall": 0.4,
+          "f1": 0.36363636363636365,
+          "support": 5
+        },
+        {
+          "label": "positive",
+          "precision": 0.8253968253968254,
+          "recall": 0.5416666666666666,
+          "f1": 0.6540880503144654,
+          "support": 96
+        }
+      ],
+      "sample_size": 200
+    },
+    "baseline.authenticity": {
+      "model": "baseline",
+      "task": "authenticity",
+      "labels": [
+        "authentic",
+        "fake"
+      ],
+      "metrics": {
+        "accuracy": 0.8,
+        "macro_f1": 0.7999199679871949,
+        "weighted_f1": 0.7999199679871949,
+        "precision_macro": 0.8004807692307692,
+        "recall_macro": 0.8,
+        "support": 100,
+        "per_label_support": {
+          "authentic": 50,
+          "fake": 50
+        },
+        "confusion_matrix": [
+          [
+            41,
+            9
+          ],
+          [
+            11,
+            39
+          ]
+        ]
+      },
+      "classwise": [
+        {
+          "label": "authentic",
+          "precision": 0.7884615384615384,
+          "recall": 0.82,
+          "f1": 0.803921568627451,
+          "support": 50
+        },
+        {
+          "label": "fake",
+          "precision": 0.8125,
+          "recall": 0.78,
+          "f1": 0.7959183673469388,
+          "support": 50
+        }
+      ],
+      "sample_size": 100
+    },
+    "single_task_authenticity.authenticity": {
+      "model": "single_task_authenticity",
+      "task": "authenticity",
+      "labels": [
+        "authentic",
+        "fake"
+      ],
+      "metrics": {
+        "accuracy": 0.73,
+        "macro_f1": 0.7087692805522597,
+        "weighted_f1": 0.7087692805522597,
+        "precision_macro": 0.8246753246753247,
+        "recall_macro": 0.73,
+        "support": 100,
+        "per_label_support": {
+          "authentic": 50,
+          "fake": 50
+        },
+        "confusion_matrix": [
+          [
+            23,
+            27
+          ],
+          [
+            0,
+            50
+          ]
+        ]
+      },
+      "classwise": [
+        {
+          "label": "authentic",
+          "precision": 1.0,
+          "recall": 0.46,
+          "f1": 0.6301369863013698,
+          "support": 50
+        },
+        {
+          "label": "fake",
+          "precision": 0.6493506493506493,
+          "recall": 1.0,
+          "f1": 0.7874015748031497,
+          "support": 50
+        }
+      ],
+      "sample_size": 100
+    },
+    "multitask.authenticity": {
+      "model": "multitask",
+      "task": "authenticity",
+      "labels": [
+        "authentic",
+        "fake"
+      ],
+      "metrics": {
+        "accuracy": 0.86,
+        "macro_f1": 0.8579545454545454,
+        "weighted_f1": 0.8579545454545454,
+        "precision_macro": 0.8820033955857385,
+        "recall_macro": 0.86,
+        "support": 100,
+        "per_label_support": {
+          "authentic": 50,
+          "fake": 50
+        },
+        "confusion_matrix": [
+          [
+            37,
+            13
+          ],
+          [
+            1,
+            49
+          ]
+        ]
+      },
+      "classwise": [
+        {
+          "label": "authentic",
+          "precision": 0.9736842105263158,
+          "recall": 0.74,
+          "f1": 0.8409090909090909,
+          "support": 50
+        },
+        {
+          "label": "fake",
+          "precision": 0.7903225806451613,
+          "recall": 0.98,
+          "f1": 0.875,
+          "support": 50
+        }
+      ],
+      "sample_size": 100
+    }
+  }
+}

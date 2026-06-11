@@ -1,0 +1,16 @@
+model,task,label,precision,recall,f1,support
+baseline,sentiment,negative,0.8461538461538461,0.7777777777777778,0.8105263157894737,99
+baseline,sentiment,neutral,0.6,0.6,0.6,5
+baseline,sentiment,positive,0.7692307692307693,0.8333333333333334,0.8,96
+single_task_sentiment,sentiment,negative,0.7606837606837606,0.898989898989899,0.8240740740740741,99
+single_task_sentiment,sentiment,neutral,0.0,0.0,0.0,5
+single_task_sentiment,sentiment,positive,0.8674698795180723,0.75,0.8044692737430168,96
+multitask,sentiment,negative,0.6564885496183206,0.8686868686868687,0.7478260869565218,99
+multitask,sentiment,neutral,0.3333333333333333,0.4,0.36363636363636365,5
+multitask,sentiment,positive,0.8253968253968254,0.5416666666666666,0.6540880503144654,96
+baseline,authenticity,authentic,0.7884615384615384,0.82,0.803921568627451,50
+baseline,authenticity,fake,0.8125,0.78,0.7959183673469388,50
+single_task_authenticity,authenticity,authentic,1.0,0.46,0.6301369863013698,50
+single_task_authenticity,authenticity,fake,0.6493506493506493,1.0,0.7874015748031497,50
+multitask,authenticity,authentic,0.9736842105263158,0.74,0.8409090909090909,50
+multitask,authenticity,fake,0.7903225806451613,0.98,0.875,50

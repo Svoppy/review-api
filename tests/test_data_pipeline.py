@@ -8,6 +8,8 @@ from reviewguard.data import (
     load_maide_up,
     merge_unified_datasets,
     build_dataset_audit_report,
+    load_dataset,
+    load_fraudyelp,
     load_opspam,
     load_perekrestok_ratings,
     load_rureviews,
@@ -18,6 +20,7 @@ from reviewguard.data import (
     normalize_text,
     process_dataset,
     summarize_unified_records,
+    validate_normalized_records,
 )
 
 
@@ -105,6 +108,8 @@ def test_load_opspam_from_directory_infers_labels(tmp_path: Path) -> None:
     assert records[0].sentiment_label == "positive"
     assert records[0].domain == "hospitality"
     assert records[0].metadata["path"] == "deceptive/positive/fold1/d1.txt"
+    assert records[0].record_id == "deceptive/positive/fold1/d1.txt"
+    assert records[0].metadata["authenticity_subtype"] == "crowdsourced_deception"
 
 
 def test_load_maide_up_supports_boolean_ai_flag(tmp_path: Path) -> None:
@@ -132,6 +137,8 @@ def test_load_maide_up_supports_boolean_ai_flag(tmp_path: Path) -> None:
     assert records[0].authenticity_label == "fake"
     assert records[0].sentiment_label == "positive"
     assert records[0].source == "maide_up"
+    assert records[0].metadata["authenticity_label_origin"] == "is_ai_generated_flag"
+    assert records[0].metadata["authenticity_subtype"] == "ai_generated"
 
 
 def test_load_maide_up_supports_huggingface_shape(tmp_path: Path) -> None:
@@ -160,7 +167,7 @@ def test_load_maide_up_supports_huggingface_shape(tmp_path: Path) -> None:
     records = load_maide_up(dataset_path)
 
     assert len(records) == 1
-    assert records[0].language == "chinese"
+    assert records[0].language == "zh"
     assert records[0].domain == "hospitality"
     assert records[0].authenticity_label == "fake"
     assert records[0].sentiment_label == "negative"
@@ -170,6 +177,58 @@ def test_load_maide_up_supports_huggingface_shape(tmp_path: Path) -> None:
     assert records[0].metadata["city_name"] == "Ankara"
     assert "Pros:" in records[0].text
     assert "Cons:" in records[0].text
+
+
+def test_load_fraudyelp_supports_local_tabular_export_and_provenance(tmp_path: Path) -> None:
+    raw_dir = tmp_path / "fraudyelp"
+    raw_dir.mkdir()
+    dataset_path = raw_dir / "reviews.jsonl"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "review_id": "fy-1",
+                "review_text": "Suspicious but helpful review text.",
+                "label": 1,
+                "rating": 5,
+                "business_id": "b-7",
+                "user_id": "u-2",
+                "split": "train",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    records = load_fraudyelp(raw_dir)
+
+    assert len(records) == 1
+    assert records[0].source == "fraudyelp"
+    assert records[0].authenticity_label == "fake"
+    assert records[0].sentiment_label == "positive"
+    assert records[0].metadata["authenticity_subtype"] == "silver_fraud"
+    assert records[0].metadata["authenticity_label_origin"] == "dataset_label"
+    assert records[0].metadata["raw_authenticity_label"] == "1"
+    assert records[0].metadata["raw_export_file"] == "reviews.jsonl"
+    assert records[0].product_id == "b-7"
+
+
+def test_load_fraudyelp_requires_explicit_text_export_shape(tmp_path: Path) -> None:
+    raw_dir = tmp_path / "fraudyelp"
+    raw_dir.mkdir()
+    dataset_path = raw_dir / "reviews.jsonl"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "review_id": "fy-1",
+                "label": 0,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="empty text"):
+        load_dataset("fraudyelp", raw_dir)
 
 
 def test_process_dataset_writes_jsonl_and_csv(tmp_path: Path) -> None:
@@ -217,6 +276,52 @@ def test_load_unified_records_restores_processed_metadata(tmp_path: Path) -> Non
     assert len(records) == 1
     assert records[0]["source"] == "rureviews"
     assert records[0]["metadata"]["raw_dataset"] == "RuReviews"
+
+
+def test_validate_normalized_records_rejects_duplicate_source_scoped_ids() -> None:
+    records = [
+        {
+            "record_id": "1",
+            "source": "demo",
+            "language": "en",
+            "domain": "ecommerce",
+            "text": "First review",
+            "sentiment_label": "positive",
+            "authenticity_label": None,
+            "metadata": {},
+        },
+        {
+            "record_id": "1",
+            "source": "demo",
+            "language": "en",
+            "domain": "ecommerce",
+            "text": "Second review",
+            "sentiment_label": "negative",
+            "authenticity_label": None,
+            "metadata": {},
+        },
+    ]
+
+    with pytest.raises(ValueError, match="duplicate source-scoped record ids"):
+        validate_normalized_records(records)
+
+
+def test_validate_normalized_records_rejects_empty_text() -> None:
+    records = [
+        {
+            "record_id": "1",
+            "source": "demo",
+            "language": "en",
+            "domain": "ecommerce",
+            "text": "   ",
+            "sentiment_label": "positive",
+            "authenticity_label": None,
+            "metadata": {},
+        }
+    ]
+
+    with pytest.raises(ValueError, match="empty text"):
+        validate_normalized_records(records)
 
 
 def test_cli_entrypoint_processes_dataset(tmp_path: Path) -> None:
@@ -517,6 +622,9 @@ def test_build_dataset_audit_report_computes_majority_baseline_and_overlap() -> 
     records = train_records + valid_records + test_records
 
     report = build_dataset_audit_report(records, split, input_path=None, random_state=42)
+
+    assert report["label_coverage"]["source"]["sentiment"]["demo"]["records"] == 5
+    assert report["label_coverage"]["source"]["authenticity"]["demo"]["labeled_records"] == 5
 
     assert report["records"] == 5
     assert report["split_sizes"] == {"train": 3, "valid": 1, "test": 1}

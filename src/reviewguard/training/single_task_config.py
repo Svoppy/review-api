@@ -24,7 +24,9 @@ class SingleTaskTrainingConfig:
     batch_size: int = 8
     learning_rate: float = 2e-5
     weight_decay: float = 0.01
-    epochs: int = 1
+    epochs: int = 4
     dropout: float = 0.1
+    class_weight_mode: str = "balanced"
+    early_stopping_patience: int | None = 2
     device: str = "cpu"
     random_state: int = 42

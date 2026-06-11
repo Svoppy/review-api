@@ -35,6 +35,43 @@ class UnifiedReviewRecord:
         return payload
 
 
+def _record_identity_key(record: Mapping[str, Any]) -> tuple[str, str] | None:
+    record_id = record.get("record_id")
+    if record_id in (None, ""):
+        return None
+    source = normalize_source_name(str(record.get("source") or "unknown"))
+    return (source, str(record_id))
+
+
+def validate_normalized_records(records: Iterable[UnifiedReviewRecord | Mapping[str, Any]]) -> dict[str, int]:
+    seen_record_ids: set[tuple[str, str]] = set()
+    summary = {
+        "records": 0,
+        "empty_text_records": 0,
+        "duplicate_record_ids": 0,
+    }
+    for record in records:
+        payload = record.to_dict() if isinstance(record, UnifiedReviewRecord) else dict(record)
+        summary["records"] += 1
+        if not normalize_text(payload.get("text")):
+            summary["empty_text_records"] += 1
+        record_key = _record_identity_key(payload)
+        if record_key is not None:
+            if record_key in seen_record_ids:
+                summary["duplicate_record_ids"] += 1
+            seen_record_ids.add(record_key)
+
+    if summary["empty_text_records"] > 0:
+        raise ValueError(
+            f"Normalized dataset contains {summary['empty_text_records']} records with empty text."
+        )
+    if summary["duplicate_record_ids"] > 0:
+        raise ValueError(
+            f"Normalized dataset contains {summary['duplicate_record_ids']} duplicate source-scoped record ids."
+        )
+    return summary
+
+
 def normalize_text(value: Any) -> str:
     text = str(value or "")
     text = text.replace("\r\n", "\n").replace("\r", "\n")
@@ -161,6 +198,26 @@ def _iter_tabular_rows(path: str | Path) -> Iterator[dict[str, Any]]:
     raise ValueError(f"Unsupported file format: {dataset_path.suffix}")
 
 
+def _resolve_local_export(
+    path: str | Path,
+    *,
+    dataset_name: str,
+    candidates: tuple[str, ...],
+) -> Path:
+    dataset_path = Path(path)
+    if dataset_path.is_file():
+        return dataset_path
+    if dataset_path.is_dir():
+        for candidate in candidates:
+            candidate_path = dataset_path / candidate
+            if candidate_path.is_file():
+                return candidate_path
+    supported = ", ".join(candidates)
+    raise ValueError(
+        f"{dataset_name} loader expects a local tabular export file or a directory containing one of: {supported}"
+    )
+
+
 def _build_record(
     *,
     text: Any,
@@ -180,7 +237,7 @@ def _build_record(
     return UnifiedReviewRecord(
         text=normalize_text(text),
         source=normalize_source_name(source),
-        language=str(language).strip().lower(),
+        language=normalize_language(language),
         domain=str(domain).strip().lower(),
         sentiment_label=normalize_sentiment_label(sentiment_label),
         authenticity_label=normalize_authenticity_label(authenticity_label),
@@ -191,6 +248,23 @@ def _build_record(
         rating=normalized_rating,
         metadata=dict(metadata or {}),
     )
+
+
+def normalize_language(value: Any) -> str:
+    normalized = str(value or "unknown").strip().lower()
+    aliases = {
+        "english": "en",
+        "french": "fr",
+        "german": "de",
+        "italian": "it",
+        "spanish": "es",
+        "turkish": "tr",
+        "korean": "ko",
+        "romanian": "ro",
+        "chinese": "zh",
+        "russian": "ru",
+    }
+    return aliases.get(normalized, normalized)
 
 
 def load_rureviews(path: str | Path) -> list[UnifiedReviewRecord]:
@@ -224,7 +298,10 @@ def load_rureviews(path: str | Path) -> list[UnifiedReviewRecord]:
                         domain="ecommerce",
                         sentiment_label=sentiment_label,
                         record_id=record_index,
-                        metadata={"raw_dataset": "RuReviews"},
+                        metadata={
+                            "raw_dataset": "RuReviews",
+                            "sentiment_label_origin": "dataset_label",
+                        },
                     )
                 )
                 buffer = ""
@@ -243,7 +320,10 @@ def load_rureviews(path: str | Path) -> list[UnifiedReviewRecord]:
                 title=_choose_field(row, "title", "summary"),
                 product_id=_choose_field(row, "product_id", "item_id", "sku"),
                 user_id=_choose_field(row, "user_id", "author_id"),
-                metadata={"raw_dataset": "RuReviews"},
+                metadata={
+                    "raw_dataset": "RuReviews",
+                    "sentiment_label_origin": "dataset_label",
+                },
             )
         )
     return records
@@ -267,6 +347,7 @@ def load_perekrestok_ratings(path: str | Path) -> list[UnifiedReviewRecord]:
                 rating=rating,
                 metadata={
                     "raw_dataset": "Perekrestok-style",
+                    "sentiment_label_origin": "rating_heuristic",
                     "product_category": _choose_field(row, "product_category", "category"),
                     "product_price": _choose_field(row, "product_price", "price"),
                 },
@@ -291,8 +372,14 @@ def load_opspam(path: str | Path) -> list[UnifiedReviewRecord]:
                     domain="hospitality",
                     sentiment_label=sentiment,
                     authenticity_label=authenticity,
-                    record_id=file_path.stem,
-                    metadata={"raw_dataset": "OpSpam", "path": str(file_path.relative_to(dataset_path))},
+                    record_id=str(file_path.relative_to(dataset_path)),
+                    metadata={
+                        "raw_dataset": "OpSpam",
+                        "path": str(file_path.relative_to(dataset_path)),
+                        "sentiment_label_origin": "directory_structure" if sentiment is not None else None,
+                        "authenticity_label_origin": "directory_structure",
+                        "authenticity_subtype": "crowdsourced_deception",
+                    },
                 )
             )
         return records
@@ -308,7 +395,12 @@ def load_opspam(path: str | Path) -> list[UnifiedReviewRecord]:
                 sentiment_label=_choose_field(row, "sentiment", "sentiment_label", "polarity"),
                 authenticity_label=_choose_field(row, "authenticity", "label", "deceptive", "class"),
                 record_id=_choose_field(row, "id", "review_id"),
-                metadata={"raw_dataset": "OpSpam"},
+                metadata={
+                    "raw_dataset": "OpSpam",
+                    "sentiment_label_origin": "dataset_label",
+                    "authenticity_label_origin": "dataset_label",
+                    "authenticity_subtype": "crowdsourced_deception",
+                },
             )
         )
     return records
@@ -336,6 +428,7 @@ def load_maide_up(path: str | Path) -> list[UnifiedReviewRecord]:
             "label",
             "source_type",
         )
+        authenticity_origin = "dataset_label" if authenticity_value is not None else None
         if authenticity_value is None:
             if "is_ai_generated" in row:
                 authenticity_value = (
@@ -343,17 +436,22 @@ def load_maide_up(path: str | Path) -> list[UnifiedReviewRecord]:
                     if str(row["is_ai_generated"]).strip().lower() in {"1", "true", "yes"}
                     else "authentic"
                 )
+                authenticity_origin = "is_ai_generated_flag"
             elif "source" in row:
                 source_value = str(row["source"]).strip().lower()
                 if source_value in {"1", "ai", "generated", "synthetic", "llm"}:
                     authenticity_value = "fake"
+                    authenticity_origin = "source_field"
                 elif source_value in {"0", "human", "real"}:
                     authenticity_value = "authentic"
+                    authenticity_origin = "source_field"
 
         rating = _choose_field(row, "rating", "stars", "score")
         sentiment_value = _choose_field(row, "sentiment", "sentiment_label", "polarity", "Sentiment")
+        sentiment_origin = "dataset_label" if sentiment_value is not None else None
         if sentiment_value is None and rating not in (None, ""):
             sentiment_value = map_rating_to_sentiment(rating)
+            sentiment_origin = "rating_heuristic"
 
         hotel_name = _choose_field(row, "Hotel Name", "hotel_name", "title", "summary")
         city_name = _choose_field(row, "City Name", "city_name")
@@ -387,10 +485,86 @@ def load_maide_up(path: str | Path) -> list[UnifiedReviewRecord]:
                 rating=rating or _choose_field(row, "Review_Score"),
                 metadata={
                     "raw_dataset": "MAiDE-up-shaped",
+                    "sentiment_label_origin": sentiment_origin,
+                    "authenticity_label_origin": authenticity_origin,
+                    "authenticity_subtype": "ai_generated",
                     "city_name": city_name,
                     "prompt_language": _choose_field(row, "Prompt_Language", "prompt_language"),
                     "na_up_review": row.get("na_up_review"),
                     "na_down_review": row.get("na_down_review"),
+                },
+            )
+        )
+    return records
+
+
+def load_fraudyelp(path: str | Path) -> list[UnifiedReviewRecord]:
+    dataset_path = _resolve_local_export(
+        path,
+        dataset_name="FraudYelpDataset",
+        candidates=(
+            "reviews.jsonl",
+            "reviews.json",
+            "reviews.csv",
+            "fraudyelp.jsonl",
+            "fraudyelp.json",
+            "fraudyelp.csv",
+            "yelp_reviews.jsonl",
+            "yelp_reviews.json",
+            "yelp_reviews.csv",
+        ),
+    )
+    records: list[UnifiedReviewRecord] = []
+    for row in _iter_tabular_rows(dataset_path):
+        text_value = _choose_field(
+            row,
+            "text",
+            "review",
+            "review_text",
+            "review_content",
+            "content",
+            "comment",
+            "body",
+        )
+        authenticity_raw = _choose_field(
+            row,
+            "authenticity",
+            "authenticity_label",
+            "fraud_label",
+            "label",
+            "class",
+            "y",
+            "is_fraud",
+        )
+        sentiment_raw = _choose_field(row, "sentiment", "sentiment_label", "polarity")
+        sentiment_origin = "dataset_label" if sentiment_raw is not None else None
+        rating = _choose_field(row, "rating", "stars", "score")
+        if sentiment_raw is None and rating not in (None, ""):
+            sentiment_raw = map_rating_to_sentiment(rating)
+            sentiment_origin = "rating_heuristic"
+
+        records.append(
+            _build_record(
+                text=text_value,
+                source="fraudyelp",
+                language=_choose_field(row, "language", "lang") or "en",
+                domain=_choose_field(row, "domain", "category") or "local_commerce",
+                sentiment_label=sentiment_raw,
+                authenticity_label=authenticity_raw,
+                record_id=_choose_field(row, "review_id", "id", "record_id"),
+                title=_choose_field(row, "title", "summary", "business_name"),
+                product_id=_choose_field(row, "business_id", "product_id", "item_id", "sku"),
+                user_id=_choose_field(row, "user_id", "author_id"),
+                rating=rating,
+                metadata={
+                    "raw_dataset": "FraudYelpDataset-shaped",
+                    "sentiment_label_origin": sentiment_origin,
+                    "authenticity_label_origin": "dataset_label",
+                    "authenticity_subtype": "silver_fraud",
+                    "raw_authenticity_label": None if authenticity_raw in (None, "") else str(authenticity_raw),
+                    "raw_sentiment_label": None if sentiment_origin != "dataset_label" or sentiment_raw in (None, "") else str(sentiment_raw),
+                    "raw_export_file": dataset_path.name,
+                    "split": _choose_field(row, "split", "partition"),
                 },
             )
         )
@@ -402,6 +576,8 @@ DATASET_LOADERS = {
     "perekrestok": load_perekrestok_ratings,
     "opspam": load_opspam,
     "maide_up": load_maide_up,
+    "fraudyelp": load_fraudyelp,
+    "fraud_yelp": load_fraudyelp,
 }
 
 
@@ -446,7 +622,9 @@ def load_dataset(name: str, path: str | Path) -> list[UnifiedReviewRecord]:
     if normalized_name not in DATASET_LOADERS:
         supported = ", ".join(sorted(DATASET_LOADERS))
         raise ValueError(f"Unsupported dataset {name!r}. Expected one of: {supported}")
-    return DATASET_LOADERS[normalized_name](path)
+    records = DATASET_LOADERS[normalized_name](path)
+    validate_normalized_records(records)
+    return records
 
 
 def load_unified_records(path: str | Path) -> list[dict[str, Any]]:

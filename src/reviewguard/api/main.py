@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from reviewguard.api.schemas import AnalyzeRequest, AnalyzeResponse
+from reviewguard.api.schemas import AnalyzeRequest, AnalyzeResponse, ResearchContext
 from reviewguard.config import settings
 from reviewguard.ml.inference import ModelNotReadyError, ReviewAnalyzer
 
@@ -20,7 +20,7 @@ def health() -> dict[str, object]:
     return {
         "status": "ok",
         "model_ready": analyzer.is_ready(),
-        "model_name": settings.model_name,
+        "model_name": analyzer.effective_model_name(),
         "checkpoint_dir": str(analyzer.checkpoint_dir),
     }
 
@@ -28,6 +28,11 @@ def health() -> dict[str, object]:
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(static_dir / "index.html")
+
+
+@app.get("/research-context", response_model=ResearchContext)
+def research_context() -> ResearchContext:
+    return ResearchContext(**analyzer.research_context())
 
 
 @app.post("/analyze", response_model=AnalyzeResponse)

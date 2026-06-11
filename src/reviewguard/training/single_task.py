@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -120,6 +122,19 @@ class SingleTaskTransformerTrainer:
         )
         return DataLoader(dataset, batch_size=self.config.batch_size, shuffle=shuffle)
 
+    def _class_weight_tensor(self, records: list[dict[str, Any]]) -> torch.Tensor | None:
+        if self.config.class_weight_mode != "balanced":
+            return None
+        counts = Counter(record[self.label_field] for record in records)
+        if len(counts) < 2:
+            return None
+        total = sum(counts.values())
+        weights = [
+            total / (len(self.labels) * counts.get(label, total)) if counts.get(label, 0) > 0 else 0.0
+            for label in self.labels
+        ]
+        return torch.tensor(weights, dtype=torch.float)
+
     def fit(
         self,
         train_records: list[dict[str, Any]],
@@ -137,12 +152,16 @@ class SingleTaskTransformerTrainer:
             lr=self.config.learning_rate,
             weight_decay=self.config.weight_decay,
         )
+        class_weights = self._class_weight_tensor(labeled_train_records)
         train_loader = self._make_loader(
             labeled_train_records,
             shuffle=True,
             include_labels=True,
         )
         history: list[dict[str, Any]] = []
+        best_validation_score: float | None = None
+        best_state_dict: dict[str, Any] | None = None
+        epochs_without_improvement = 0
 
         for epoch in range(1, self.config.epochs + 1):
             self.model.train()
@@ -155,11 +174,12 @@ class SingleTaskTransformerTrainer:
                 outputs = self.model(
                     input_ids=batch["input_ids"],
                     attention_mask=batch["attention_mask"],
-                    labels=batch["labels"],
                 )
-                loss = outputs.loss
-                if loss is None:
-                    raise ValueError("Single-task training batch did not produce a loss value.")
+                loss = torch.nn.functional.cross_entropy(
+                    outputs.logits,
+                    batch["labels"],
+                    weight=class_weights.to(self.device) if class_weights is not None else None,
+                )
                 loss.backward()
                 optimizer.step()
 
@@ -172,16 +192,40 @@ class SingleTaskTransformerTrainer:
                 "labeled_examples": len(labeled_train_records),
             }
             if valid_records:
-                epoch_summary["validation"] = self.evaluate(valid_records)
+                validation_metrics = self.evaluate(valid_records)
+                epoch_summary["validation"] = validation_metrics
+                task_metrics = validation_metrics.get(self.task, {})
+                validation_score = float(task_metrics.get("macro_f1", 0.0)) if task_metrics else 0.0
+                epoch_summary["validation_score"] = validation_score
+
+                if best_validation_score is None or validation_score > best_validation_score:
+                    best_validation_score = validation_score
+                    best_state_dict = copy.deepcopy(self.model.state_dict())
+                    epochs_without_improvement = 0
+                    epoch_summary["is_best_epoch"] = True
+                else:
+                    epochs_without_improvement += 1
+
             history.append(epoch_summary)
+
+            if (
+                valid_records
+                and self.config.early_stopping_patience is not None
+                and epochs_without_improvement >= self.config.early_stopping_patience
+            ):
+                break
+
+        if best_state_dict is not None:
+            self.model.load_state_dict(best_state_dict)
 
         self.history = history
         return {
             "history": history,
             "model_name": self.config.model_name,
             "task": self.task,
-            "epochs": self.config.epochs,
+            "epochs": len(history),
             "train_labeled_examples": len(labeled_train_records),
+            "best_validation_macro_f1": best_validation_score,
         }
 
     def predict(self, records: list[dict[str, Any]]) -> list[str]:
@@ -248,6 +292,8 @@ class SingleTaskTransformerTrainer:
                 "weight_decay": self.config.weight_decay,
                 "epochs": self.config.epochs,
                 "dropout": self.config.dropout,
+                "class_weight_mode": self.config.class_weight_mode,
+                "early_stopping_patience": self.config.early_stopping_patience,
                 "device": self.config.device,
                 "random_state": self.config.random_state,
             },

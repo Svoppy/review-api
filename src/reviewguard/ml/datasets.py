@@ -40,6 +40,13 @@ DATASET_REGISTRY = [
         caveat="Collected in an elicited experimental setup.",
     ),
     DatasetSpec(
+        name="fraudyelp",
+        task="authenticity",
+        source_url="https://www.dgl.ai/dgl_docs/generated/dgl.data.FraudDataset.html",
+        description="Silver-label fraud benchmark that requires a local review-text export for this repository pipeline.",
+        caveat="Labels are proxy fraud labels and should not be treated as perfect review-level ground truth.",
+    ),
+    DatasetSpec(
         name="maide_up",
         task="authenticity",
         source_url="https://huggingface.co/datasets/MichiganNLP/MAiDE-up",
