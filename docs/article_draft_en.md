@@ -85,6 +85,8 @@ To keep the study both realistic and reproducible, the experimental framework is
 
 This combination is necessary because no single public dataset currently offers both large-scale e-commerce sentiment labels and highly reliable authenticity annotations in one unified benchmark. Rather than hiding this limitation, the study explicitly embraces it by constructing a unified multitask corpus from several complementary resources. However, the completed pilot reported here is narrower than the full data plan: only `RuReviews` and `MAiDE-up` are used in the current empirical comparison, `Perekrestok Reviews` is prepared locally for the next benchmark stage, `OpSpam` has a code-level adapter but no local prepared copy in the current workspace snapshot, and `FraudDataset` remains a planned integration rather than a completed experimental source.
 
+At the same time, the repository now contains a larger audited preparation snapshot for the next rerun stage. The current `balanced6k` snapshot contains `6,000` records, preserves `0` normalized-text overlap across `train/validation/test` splits in the current audit, and exposes explicit label-coverage reporting by `source`, `domain`, and `language`. It should be treated as evidence of protocol maturity and data readiness rather than as a replacement for the executed pilot results reported in the present manuscript.
+
 ## 6. Methodology
 
 ### 6.1. Multitask Model Architecture
@@ -144,6 +146,8 @@ Train, validation, and test splits are designed to be leakage-safe at the prepar
 This protocol is intentionally conservative for local reproducibility, but it now supports a minimum statistical reporting layer for the pilot: `mean +/- std` across train seeds, confidence intervals, and paired significance-oriented comparisons on the fixed test split. Even so, the pilot remains too small to justify benchmark-level claims on its own.
 
 For broader benchmark generalization, the same protocol should still be extended with larger data coverage, explicit checkpoint-selection rules, source-balanced sampling variants, and dataset-level ablations. These extensions remain important because the present article reports a completed bounded study rather than a large-scale benchmark.
+
+The repository also now includes an automatically generated article-facing appendix, [article_results_package_en.md](/Users/diaskazikhanov/Desktop/aitu/nirm/docs/article_results_package_en.md), which consolidates the current pilot comparison table, paired statistical contrasts, representative confusion matrices, majority baselines, and the expanded `balanced6k` audit snapshot. This appendix is not additional experimental evidence, but it materially improves the reproducibility and inspectability of the study package.
 
 ## 7. Web System Architecture
 
@@ -256,6 +260,8 @@ The study evidence provides support for `H2` within the current protocol: joint 
 
 At the same time, the pilot validates the end-to-end research infrastructure. The repository can ingest real public corpora, normalize them, build a joint partially labeled sample, train all comparison families, export the multitask checkpoint, and run inference against the exported artifact through the web service stack.
 
+The surrounding repository package now makes this study easier to audit than before. In addition to the executed pilot runs, the project exposes a canonical article-facing appendix with the current comparison tables, pairwise significance-oriented contrasts, representative confusion matrices, majority baselines, and the expanded audited preparation snapshot. This does not widen the empirical scope of the present paper, but it does reduce ambiguity about what was executed, what was only prepared, and where the next robustness-oriented rerun should begin.
+
 ## 10. Threats to Validity and Study Limitations
 
 The study explicitly acknowledges its limitations and avoids overclaiming beyond completed experiments.
@@ -272,7 +278,11 @@ Fifth, the current article stage includes a completed bounded comparison, but no
 
 Sixth, the current experiment scale is still small: `2,000` total pilot records, `200` sentiment test examples, `100` authenticity test examples, `3` train seeds, and `1` training epoch. This is enough for a reproducible pilot with basic statistical reporting, but not enough for benchmark-level conclusions.
 
-Seventh, the current work should not be interpreted as fully autonomous scientific judgment. The system can help structure experiments, surface uncertainties, and improve reproducibility, but it does not remove the need for human oversight in data curation, methodological choices, or claim interpretation.
+Seventh, although the repository now includes repeated runs, confidence intervals, significance-oriented comparisons, representative confusion matrices, and a canonical article appendix, broader generalization still requires dataset-specific authenticity reporting, larger data coverage, and source-controlled robustness checks.
+
+Eighth, the larger audited `balanced6k` preparation snapshot is a protocol-strengthening artifact rather than completed model evidence. It confirms leakage-safe splitting on the current corpus preparation and improves visibility into label coverage, but its authenticity supervision still comes only from `MAiDE-up`, and its sentiment test split still contains only `8` `neutral` examples. For that reason it should be cited as infrastructure maturity, not as a solved empirical benchmark.
+
+Ninth, the current work should not be interpreted as fully autonomous scientific judgment. The system can help structure experiments, surface uncertainties, and improve reproducibility, but it does not remove the need for human oversight in data curation, methodological choices, or claim interpretation.
 
 ## 11. Discussion
 
@@ -286,6 +296,8 @@ From a systems perspective, the shared encoder reduces inference complexity rela
 
 The growing importance of AI-generated reviews further strengthens the relevance of the work. By 2026, authenticity detection can no longer be framed only as a problem of human-written deception; it must also handle synthetic review generation and cross-generator generalization. The inclusion of `MAiDE-up` directly reflects this shift.
 
+That is also why the repository's newer audit and appendix layers matter. They do not magically resolve the scientific limitations of the present pilot, but they make the study much easier to inspect and much harder to overstate. For a manuscript at this stage, that transparency is part of the quality of the contribution.
+
 ## 12. Conclusion
 
 This paper develops a multitask Transformer-based model and a web system for joint sentiment analysis and review authenticity detection in e-commerce. Instead of treating the two tasks as separate services, the system uses a shared encoder with task-specific heads and supports partially labeled heterogeneous corpora.
@@ -297,6 +309,8 @@ The reported study already yields a meaningful but limited empirical conclusion.
 The cleanest interpretation is not that multitask learning is simply “better” or “worse,” but that transfer in this problem is conditional. Under the present low-resource mixed-domain setup, shared training helps authenticity and does not yet deliver a sentiment advantage. Any stronger claim should be reserved for a larger benchmark with better minority-class support and explicit source-controlled robustness reporting.
 
 As a result, the study now stands on credible executed evidence rather than on a purely architectural proposal. The present article should therefore be read as a reproducible bounded empirical report, not as a final benchmark paper. The next extension is not to prove that the pipeline works, because that has already been demonstrated, but to scale the benchmark further: larger corpora, source-controlled ablations, integration of `OpSpam` and `FraudDataset`, and statistically grounded comparison on the complete corpora.
+
+The surrounding repository package is now also stronger than a plain draft manuscript: it documents the executed pilot through audited data artifacts, canonical result tables, and a more explicit bridge between article claims and report files. That does not eliminate the need for broader reruns, but it does make the present bounded study substantially more submission-ready and reviewable.
 
 ## References
 

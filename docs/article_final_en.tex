@@ -169,6 +169,8 @@ The executed study reported in this article relies on sampled but auditable subs
 
 This distinction is not cosmetic. The current study is large enough to support a real comparative analysis under one controlled protocol, but not large enough to justify universal claims about multitask transfer across all review domains and authenticity regimes. In particular, reviewer-facing metrics such as Macro-F1 should not be interpreted as highly stable when a minority class in the test split is represented by only a handful of examples.
 
+At the same time, the repository now includes a larger audited preparation snapshot intended for the next rerun stage. This \texttt{balanced6k} snapshot contains 6{,}000 records, preserves zero normalized-text overlap across train/validation/test splits under the current audit, and provides explicit label-coverage reporting by source, domain, and language. It should be treated as evidence of data-readiness and protocol maturity rather than as a replacement for the executed pilot results reported in the present article.
+
 \section{Methodology}
 
 \subsection{Multitask Model Architecture}
@@ -315,9 +317,13 @@ Sentiment behaves differently. Multitask macro-F1 is $0.5856 \pm 0.0665$ versus 
 
 Read conservatively, these numbers support a \emph{solid within-study} authenticity gain but only a \emph{caution-level} sentiment interpretation. The authenticity effect is consistent across the current fixed test protocol, yet its external validity remains limited by domain and language confounding. The sentiment comparison is much less stable because its confidence interval is wide and the neutral class has only five test examples. In addition, the current pairwise significance tests should be treated as planned contrasts within one study protocol rather than as a fully multiplicity-controlled confirmatory analysis.
 
+The confusion-matrix patterns reinforce this reading. On the representative pilot checkpoint, the sentiment-only Transformer recovers none of the five neutral test examples, whereas the baseline recovers three and the multitask model recovers two. The main sentiment weakness of the multitask model is a large number of positive-to-negative confusions, which explains why its aggregate sentiment result remains below the baseline despite being roughly tied with the sentiment-only Transformer in Macro-F1. For authenticity, the qualitative picture is more favorable: the multitask model misses only one fake review on the representative pilot checkpoint, while the authenticity-only Transformer overpredicts the fake class and produces many authentic-to-fake errors. These repository-side diagnostics are useful because they show that the pilot's main finding is not a metric artifact alone; it is also visible in the structure of model errors.
+
 \subsection{Interpretation Against H1--H3}
 
 The current study supports a more precise interpretation than a generic claim of ``mixed results.'' On the present protocol, \textbf{H1} is not supported: multitask sentiment does not improve meaningfully over the sentiment-only Transformer and remains clearly below the classical baseline. \textbf{H2} is supported within the current study scope: multitask training improves authenticity detection relative to the tested comparison models on the fixed mixed-source split. \textbf{H3} remains only partially resolved. The study shows that transfer can help one task without helping the other, but a stronger robustness claim still requires explicit source-, domain-, and language-sliced reporting rather than inference from pooled scores alone.
+
+The repository package also includes an automatically generated article appendix that consolidates the pilot comparison table, paired statistical contrasts, representative confusion matrices, majority baselines, and the current expanded audit snapshot. This appendix is not itself additional experimental evidence, but it materially improves the reproducibility and inspectability of the study package that accompanies the manuscript.
 
 \section{Threats to Validity and Limitations}
 
@@ -337,9 +343,11 @@ Sixth, the current repository snapshot contains a completed low-resource compari
 
 Seventh, the executed study remains small: 2{,}000 total reviews, 200 sentiment test examples, 100 authenticity-labeled test examples, only three train seeds, and extremely sparse support for the neutral sentiment class in the test split. This is enough for a useful controlled comparison, but not enough for benchmark-level certainty.
 
-Eighth, although the current article reports repeated runs, confidence intervals, significance-oriented comparisons, and a task-ablation summary, broader generalization still requires dataset-specific authenticity reporting, larger data coverage, and source-controlled robustness checks.
+Eighth, although the current article reports repeated runs, confidence intervals, significance-oriented comparisons, a task-ablation summary, and repository-side confusion-matrix diagnostics, broader generalization still requires dataset-specific authenticity reporting, larger data coverage, and source-controlled robustness checks.
 
-Ninth, the work should not be interpreted as advocating fully autonomous moderation or evaluation. The current system can help structure experiments, surface uncertainties, and improve reproducibility, but it does not remove the need for human oversight in data curation, methodological decisions, or claim interpretation.
+Ninth, the larger audited \texttt{balanced6k} preparation snapshot is a protocol-strengthening artifact rather than completed model evidence. It confirms leakage-safe splitting on the current corpus preparation and improves visibility into label coverage, but its authenticity supervision still comes only from \texttt{MAiDE-up}, and its sentiment test split still contains only eight neutral examples. For that reason it should be cited as infrastructure maturity, not as a solved empirical benchmark.
+
+Tenth, the work should not be interpreted as advocating fully autonomous moderation or evaluation. The current system can help structure experiments, surface uncertainties, and improve reproducibility, but it does not remove the need for human oversight in data curation, methodological decisions, or claim interpretation.
 
 \section{Discussion}
 
@@ -351,13 +359,15 @@ The growing importance of AI-generated reviews further strengthens the relevance
 
 At the same time, the article should resist the temptation to collapse all authenticity settings into one headline number. A broader follow-up study will need to separate at least three evaluation regimes: sentiment on e-commerce reviews, authenticity on AI-generated reviews, and mixed or cross-domain authenticity under heterogeneous label semantics.
 
+That is also why the repository's newer audit and appendix layers matter. They do not magically resolve the scientific limitations of the present pilot, but they reduce ambiguity about what was executed, what was only prepared, and where the next robustness-oriented rerun should begin. For a manuscript in this stage, that kind of transparency is part of the quality of the contribution.
+
 \section{Conclusion}
 
 This paper presents a multitask Transformer-based model and a web system for joint sentiment analysis and review authenticity detection in e-commerce. Instead of treating the two tasks as separate services, the proposed approach uses a shared encoder with task-specific heads and supports partially labeled heterogeneous corpora.
 
 The study provides a clear methodological scope, a unified data schema, a practical deployment architecture, and a completed comparative result package on real public data. It also clarifies how heterogeneous authenticity benchmarks can be incorporated into one supervised learning workflow without pretending that their labels are semantically identical. The central empirical finding is asymmetric transfer: under the executed low-resource mixed-source protocol, shared training improves authenticity detection but does not improve sentiment relative to the strongest available baseline.
 
-The resulting contribution is therefore narrower than a benchmark paper, but also more defensible. Rather than claiming general multitask superiority, the paper shows that joint training for sentiment and authenticity is feasible under partial supervision, empirically useful for authenticity in the completed pilot, and best interpreted through explicit scope conditions. Broader claims about robustness, domain transfer, or universal gains remain future work and should be established only through larger, source-controlled evaluation.
+The resulting contribution is therefore narrower than a benchmark paper, but also more defensible. Rather than claiming general multitask superiority, the paper shows that joint training for sentiment and authenticity is feasible under partial supervision, empirically useful for authenticity in the completed pilot, and best interpreted through explicit scope conditions. The surrounding repository package now also documents the study more rigorously through an audited expanded-corpus snapshot and an automatically consolidated results appendix. Broader claims about robustness, domain transfer, or universal gains remain future work and should be established only through larger, source-controlled evaluation.
 
 \begin{thebibliography}{99}
 
