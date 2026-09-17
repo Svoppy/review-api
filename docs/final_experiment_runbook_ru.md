@@ -107,6 +107,17 @@ Wildberries добавляет только rating-derived sentiment. Он не 
 
 Для `article30k` используйте отдельный memory-safe профиль `configs/model.article30k.mac_m2_16gb.yaml`: physical batch равен `2`, gradient accumulation равен `4` (эффективный batch `8`), длина текста ограничена `192` токенами, а gradient checkpointing снижает пик памяти. До запуска убедитесь, что `torch.backends.mps.is_available()` возвращает `True`.
 
+```bash
+PYTHONPATH=src python scripts/run_article_release.py \
+  --input data/processed/joint_reviews.article30k.jsonl \
+  --config configs/model.article30k.mac_m2_16gb.yaml \
+  --output-root models/multiseed/article30k-m2pro \
+  --report-root reports/multiseed/article30k-m2pro \
+  --preflight-report reports/preflight/article30k-m2pro_preflight.json \
+  --statistics-root reports/multiseed/article30k-m2pro_statistics \
+  --ablation-root reports/multiseed/article30k-m2pro_ablation
+```
+
 ### Сборка same-domain benchmark для контроля доменного сдвига
 
 ```bash
