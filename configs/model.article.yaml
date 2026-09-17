@@ -1,6 +1,13 @@
-model_name: distilbert-base-multilingual-cased
-max_length: 128
+model_name: FacebookAI/xlm-roberta-base
+max_length: 256
 dropout: 0.1
+pooling: cls
+head_type: mlp
+experiment:
+  name: article20k_xlmr_multitask_v1
+  require_accelerator: true
+  primary_metric: macro_f1
+  train_seeds: [11, 21, 42, 84, 126]
 sentiment_labels:
   - negative
   - neutral
@@ -9,51 +16,55 @@ authenticity_labels:
   - authentic
   - fake
 loss_weights:
-  sentiment: 1.0
-  authenticity: 1.0
+  sentiment: 0.5
+  authenticity: 0.5
 train:
   batch_size: 8
   learning_rate: 2.0e-5
   weight_decay: 0.01
-  epochs: 4
+  epochs: 5
   warmup_ratio: 0.1
   scheduler_type: linear
   max_grad_norm: 1.0
+  gradient_accumulation_steps: 1
+  gradient_checkpointing: false
   class_weight_mode: balanced
   train_sampler: source_balanced
   early_stopping_patience: 2
   random_state: 42
-  device: cpu
-  output_dir: models/experiments/pilot-multitask
-  export_dir: models/pilot-latest
+  device: auto
+  output_dir: models/experiments/article-multitask
+  export_dir: models/article-latest
 analysis:
   robustness_slice_fields:
     - source
     - domain
     - language
-  robustness_min_support: 10
+  robustness_min_support: 25
 single_task:
   train:
     batch_size: 8
     learning_rate: 2.0e-5
     weight_decay: 0.01
-    epochs: 4
+    epochs: 5
     warmup_ratio: 0.1
     scheduler_type: linear
     max_grad_norm: 1.0
+    gradient_accumulation_steps: 1
+    gradient_checkpointing: false
     class_weight_mode: balanced
     early_stopping_patience: 2
     random_state: 42
-    device: cpu
+    device: auto
   tasks:
     sentiment:
       labels:
         - negative
         - neutral
         - positive
-      export_dir: models/experiments/pilot-single-task-sentiment
+      export_dir: models/experiments/article-single-task-sentiment
     authenticity:
       labels:
         - authentic
         - fake
-      export_dir: models/experiments/pilot-single-task-authenticity
+      export_dir: models/experiments/article-single-task-authenticity

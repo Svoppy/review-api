@@ -5,7 +5,8 @@ Updated: `2026-06-11`
 ## 1. Already Ready
 
 - a working end-to-end pipeline `data -> training -> export -> API -> web UI`;
-- a complete pilot package: `baseline`, `single-task`, `multitask`, `3-seed` summary, statistics, task ablation;
+- a complete **legacy** pilot package: `baseline`, `single-task`, `multitask`, `3-seed` summary, statistics, task ablation;
+- an in-progress strengthened rerun path tracked in [pilot1k_v2_status_en.md](/Users/diaskazikhanov/Desktop/aitu/nirm/docs/pilot1k_v2_status_en.md);
 - leakage-aware split logic and article-grade dataset audit;
 - locally built corpora `joint_reviews.current.jsonl` and `joint_reviews.balanced6k.jsonl`;
 - the main English manuscripts: [article_draft_en.md](/Users/diaskazikhanov/Desktop/aitu/nirm/docs/article_draft_en.md) and [article_final_en.tex](/Users/diaskazikhanov/Desktop/aitu/nirm/docs/article_final_en.tex).
@@ -14,7 +15,7 @@ Updated: `2026-06-11`
 
 ### Experiments
 
-- regenerate the key baseline / single-task / multitask runs under the current protocol from `configs/model.pilot.yaml`;
+- finish and aggregate the strengthened rerun under the current protocol from `configs/model.pilot.yaml`;
 - either keep the article explicitly scoped as a bounded pilot or add at least one non-`MAiDE-up` authenticity benchmark to the executed evidence;
 - build an article-facing robustness package for `source`, `domain`, and `language`;
 - either complete the `source-balanced vs naive` and `loss-weight` ablations or remove them from the main narrative.
@@ -63,5 +64,5 @@ The work is close to submission-ready when all of the following are true:
 1. central experimental claims are backed by real artifacts in `reports/` and `models/`;
 2. the manuscript does not promise more than the current benchmark bundle supports;
 3. reproducibility docs match the actual environment and commands;
-4. the pilot package is either honestly positioned as a bounded study or expanded into a broader authenticity benchmark;
+4. the legacy pilot package and the strengthened rerun are clearly distinguished until the newer package is fully complete;
 5. every major result claim is supported by a table, metric, or figure in the manuscript or canonical appendix.

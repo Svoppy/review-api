@@ -13,6 +13,7 @@ from reviewguard.data import (
     load_opspam,
     load_perekrestok_ratings,
     load_rureviews,
+    load_wildberries_reviews,
     load_unified_records,
     main,
     normalize_authenticity_label,
@@ -93,6 +94,40 @@ def test_load_perekrestok_from_jsonl_derives_sentiment(tmp_path: Path) -> None:
     assert records[0].sentiment_label == "neutral"
     assert records[0].rating == 3.0
     assert records[0].product_id == "milk-1"
+
+
+def test_load_wildberries_drops_author_fields_and_preserves_provenance(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "wildberries.jsonl"
+    dataset_path.write_text(
+        json.dumps(
+            {
+                "review_id": 12,
+                "product_id": 9,
+                "rating": 2,
+                "text": "Качество разочаровало",
+                "pros": "Быстрая доставка",
+                "cons": "Тонкий материал",
+                "category": "clothing",
+                "category_label": "Одежда",
+                "date": "2026-07-24",
+                "author_name": "Не сохранять",
+            },
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    records = load_wildberries_reviews(dataset_path)
+
+    assert len(records) == 1
+    assert records[0].source == "wildberries"
+    assert records[0].sentiment_label == "negative"
+    assert records[0].user_id is None
+    assert "Достоинства:" in records[0].text
+    assert "Недостатки:" in records[0].text
+    assert records[0].metadata["license"] == "CC BY-NC-SA 4.0"
+    assert records[0].metadata["review_date"] == "2026-07-24"
 
 
 def test_load_opspam_from_directory_infers_labels(tmp_path: Path) -> None:

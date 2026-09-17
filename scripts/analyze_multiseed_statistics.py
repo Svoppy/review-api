@@ -22,11 +22,13 @@ from reviewguard.analysis.statistics import (
     approximate_randomization_test,
     mean_confidence_interval,
     metric_value,
+    paired_effect_size,
     paired_bootstrap_confidence_interval,
     paired_seed_delta,
 )
 from reviewguard.ml.datasets import AUTHENTICITY_LABELS, SENTIMENT_LABELS
 from reviewguard.ml.inference import ReviewAnalyzer
+from reviewguard.training.runtime import resolve_training_device
 from reviewguard.training.splits import split_unified_records
 
 
@@ -120,6 +122,12 @@ def parse_args() -> argparse.Namespace:
         default=list(DEFAULT_COMPARISONS),
         help="Triples formatted as task:model_a:model_b.",
     )
+    parser.add_argument(
+        "--device",
+        default="auto",
+        choices=("auto", "cpu", "cuda", "mps"),
+        help="Inference device for Transformer checkpoints during paired comparisons.",
+    )
     return parser.parse_args()
 
 
@@ -161,12 +169,18 @@ def predict_baseline(records: list[dict[str, Any]], export_dir: Path, task: str)
     return [str(label) for label in pipeline.predict([record["text"] for record in records]).tolist()]
 
 
-def predict_single_task(records: list[dict[str, Any]], export_dir: Path) -> list[str]:
+def predict_single_task(
+    records: list[dict[str, Any]],
+    export_dir: Path,
+    *,
+    device: torch.device,
+) -> list[str]:
     metadata = json.loads((export_dir / "metadata.json").read_text(encoding="utf-8"))
     labels = list(metadata["labels"])
     max_length = int(metadata["max_length"])
     tokenizer = AutoTokenizer.from_pretrained(export_dir)
     model = AutoModelForSequenceClassification.from_pretrained(export_dir)
+    model.to(device)
     model.eval()
 
     predictions: list[str] = []
@@ -179,14 +193,22 @@ def predict_single_task(records: list[dict[str, Any]], export_dir: Path) -> list
                 padding=True,
                 return_tensors="pt",
             )
+            encoded = {name: tensor.to(device) for name, tensor in encoded.items()}
             outputs = model(**encoded)
             predicted_ids = outputs.logits.argmax(dim=-1).tolist()
             predictions.extend(str(labels[index]) for index in predicted_ids)
     return predictions
 
 
-def predict_multitask(records: list[dict[str, Any]], export_dir: Path, task: str) -> list[str]:
+def predict_multitask(
+    records: list[dict[str, Any]],
+    export_dir: Path,
+    task: str,
+    *,
+    device: torch.device,
+) -> list[str]:
     analyzer = ReviewAnalyzer(checkpoint_dir=export_dir)
+    analyzer.device = device
     analyzer.load()
     label_key = f"{task}_label"
     return [str(analyzer.analyze(record["text"])[label_key]) for record in records]
@@ -198,13 +220,15 @@ def model_predictions_for_task(
     model_id: str,
     export_dir: Path,
     task: str,
+    device: torch.device | None = None,
 ) -> list[str]:
+    execution_device = device or torch.device("cpu")
     if model_id == "baseline":
         return predict_baseline(records, export_dir, task)
     if model_id.startswith("single-task"):
-        return predict_single_task(records, export_dir)
+        return predict_single_task(records, export_dir, device=execution_device)
     if model_id == "multitask":
-        return predict_multitask(records, export_dir, task)
+        return predict_multitask(records, export_dir, task, device=execution_device)
     raise ValueError(f"Unsupported model id: {model_id}")
 
 
@@ -223,6 +247,51 @@ def encode_labels(records: list[dict[str, Any]], task: str) -> tuple[np.ndarray,
 
 def encode_predictions(predictions: list[str], label_to_id: dict[str, int]) -> np.ndarray:
     return np.array([label_to_id[label] for label in predictions], dtype=np.int64)
+
+
+def task_support_summary(records: list[dict[str, Any]], task: str) -> dict[str, Any]:
+    label_field = TASK_LABEL_FIELDS[task]
+    counts: dict[str, int] = {}
+    for record in records:
+        label = record.get(label_field)
+        if label is None:
+            continue
+        key = str(label)
+        counts[key] = counts.get(key, 0) + 1
+
+    minimum_support = min(counts.values()) if counts else 0
+    minority_label = min(counts, key=counts.get) if counts else None
+    return {
+        "counts": counts,
+        "minimum_support": minimum_support,
+        "minority_label": minority_label,
+        "n_examples": len(records),
+    }
+
+
+def build_task_cautions(
+    test_records_by_task: dict[str, list[dict[str, Any]]],
+    *,
+    train_seed_count: int,
+) -> dict[str, list[str]]:
+    cautions: dict[str, list[str]] = {}
+    for task, records in test_records_by_task.items():
+        task_cautions: list[str] = []
+        support = task_support_summary(records, task)
+        if support["n_examples"] < 500:
+            task_cautions.append(
+                f"{task}: test set remains small (`n={support['n_examples']}`); p-values and confidence intervals should be read cautiously."
+            )
+        if support["minimum_support"] < 50:
+            task_cautions.append(
+                f"{task}: minority class '{support['minority_label']}' has only {support['minimum_support']} test examples; macro-F1 is likely unstable."
+            )
+        if train_seed_count < 5:
+            task_cautions.append(
+                f"{task}: only `{train_seed_count}` train seeds are available; paired effect sizes and seed-level intervals remain preliminary."
+            )
+        cautions[task] = task_cautions
+    return cautions
 
 
 def model_interval_rows(summary: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -309,6 +378,7 @@ def comparison_rows(
                 metric=metric_name,
                 num_labels=num_labels,
             )
+            effect_size = paired_effect_size(per_seed_deltas)
             bootstrap_interval = paired_bootstrap_confidence_interval(
                 y_true,
                 model_a_predictions,
@@ -330,6 +400,7 @@ def comparison_rows(
             comparison_payload["metrics"][metric_name] = {
                 "delta_per_seed": per_seed_deltas,
                 "observed_delta": observed_delta,
+                "effect_size": effect_size,
                 "bootstrap_ci95": bootstrap_interval,
                 "approx_randomization_p_value": randomization["p_value"],
             }
@@ -343,6 +414,16 @@ def comparison_rows(
                     "ci_low": round(float(bootstrap_interval["ci_low"]), 6),
                     "ci_high": round(float(bootstrap_interval["ci_high"]), 6),
                     "p_value": round(float(randomization["p_value"]), 6),
+                    "cohens_dz": (
+                        None
+                        if effect_size["cohens_dz"] is None
+                        else round(float(effect_size["cohens_dz"]), 6)
+                    ),
+                    "hedges_g": (
+                        None
+                        if effect_size["hedges_g"] is None
+                        else round(float(effect_size["hedges_g"]), 6)
+                    ),
                     "n_examples": int(y_true.shape[0]),
                 }
             )
@@ -359,6 +440,7 @@ def build_report(
     train_seeds: list[int],
     interval_rows: list[dict[str, Any]],
     comparison_rows_data: list[dict[str, Any]],
+    task_cautions: dict[str, list[str]],
 ) -> str:
     lines = [
         "# Multi-Seed Statistical Analysis",
@@ -386,16 +468,17 @@ def build_report(
             "",
             "## Paired model comparisons on the fixed test split",
             "",
-            "| Task | Metric | A | B | Mean Delta | 95% Bootstrap CI | Approx. Randomization p |",
-            "|---|---|---|---|---:|---:|---:|",
+            "| Task | Metric | A | B | Mean Delta | 95% Bootstrap CI | Approx. Randomization p | Cohen's dz |",
+            "|---|---|---|---|---:|---:|---:|---:|",
         ]
     )
     for row in comparison_rows_data:
+        cohens_dz = "-" if row["cohens_dz"] is None else f"{row['cohens_dz']:.4f}"
         lines.append(
             "| "
             f"`{row['task']}` | `{row['metric']}` | `{row['model_a']}` | `{row['model_b']}` | "
             f"{row['observed_delta']:.4f} | [{row['ci_low']:.4f}, {row['ci_high']:.4f}] | "
-            f"{row['p_value']:.4f} |"
+            f"{row['p_value']:.4f} | {cohens_dz} |"
         )
     lines.extend(
         [
@@ -405,16 +488,30 @@ def build_report(
             "- Confidence intervals for model-level metrics are Student-t 95% intervals over train seeds.",
             "- Pairwise deltas use paired bootstrap resampling over the fixed test examples, averaged across train seeds.",
             "- p-values come from an approximate randomization test on the same fixed test split.",
-            "- With only three train seeds, this layer is still preliminary; it is meant to prevent overclaiming, not to overstate certainty.",
+            "- Cohen's dz is reported over paired train-seed deltas as a compact effect-size summary; with few seeds it should be treated as descriptive rather than definitive.",
+            "- This layer is meant to prevent overclaiming, not to overstate certainty.",
+            "",
+            "## Statistical cautions",
+            "",
             "",
         ]
     )
+    for task, cautions in task_cautions.items():
+        if not cautions:
+            continue
+        lines.append(f"### {task.capitalize()}")
+        lines.append("")
+        for caution in cautions:
+            lines.append(f"- {caution}")
+        lines.append("")
     return "\n".join(lines)
 
 
 def main() -> int:
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    runtime_device = resolve_training_device(args.device)
+    execution_device = torch.device(runtime_device.resolved)
 
     summary = json.loads(args.summary_json.read_text(encoding="utf-8"))
     records = read_jsonl(args.input)
@@ -440,6 +537,7 @@ def main() -> int:
                         model_id=model_id,
                         export_dir=export_dir,
                         task=task,
+                        device=execution_device,
                     )
             elif model_id == "single-task-sentiment":
                 task_predictions["sentiment"] = model_predictions_for_task(
@@ -447,6 +545,7 @@ def main() -> int:
                     model_id=model_id,
                     export_dir=export_dir,
                     task="sentiment",
+                    device=execution_device,
                 )
             elif model_id == "single-task-authenticity":
                 task_predictions["authenticity"] = model_predictions_for_task(
@@ -454,6 +553,7 @@ def main() -> int:
                     model_id=model_id,
                     export_dir=export_dir,
                     task="authenticity",
+                    device=execution_device,
                 )
             predictions_by_model[model_id][seed] = task_predictions
 
@@ -468,6 +568,10 @@ def main() -> int:
         randomization_samples=args.randomization_samples,
         random_state=args.random_state,
     )
+    task_cautions = build_task_cautions(
+        test_records_by_task,
+        train_seed_count=len(args.train_seeds),
+    )
 
     summary_payload = {
         "input_path": str(args.input),
@@ -475,6 +579,11 @@ def main() -> int:
         "train_seeds": list(args.train_seeds),
         "bootstrap_samples": args.bootstrap_samples,
         "randomization_samples": args.randomization_samples,
+        "inference_device": {
+            "requested": runtime_device.requested,
+            "effective": runtime_device.resolved,
+        },
+        "task_cautions": task_cautions,
         "model_intervals": interval_payload,
         "pairwise_comparisons": comparisons_payload,
     }
@@ -492,6 +601,7 @@ def main() -> int:
             train_seeds=list(args.train_seeds),
             interval_rows=interval_rows,
             comparison_rows_data=comparison_rows_data,
+            task_cautions=task_cautions,
         )
         + "\n",
         encoding="utf-8",

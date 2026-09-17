@@ -14,6 +14,7 @@ class DatasetRow:
     domain: str
     label_type: str
     task: str
+    evidence_status: str
     limitation: str
 
 
@@ -25,6 +26,7 @@ CURRENT_DATASET_ROWS = (
         domain="e-commerce",
         label_type="готовые sentiment labels",
         task="Sentiment",
+        evidence_status="prepared locally; executed in legacy pilot",
         limitation="нет authenticity label coverage",
     ),
     DatasetRow(
@@ -34,6 +36,7 @@ CURRENT_DATASET_ROWS = (
         domain="retail",
         label_type="rating-derived sentiment",
         task="Sentiment",
+        evidence_status="prepared locally; not executed in reported pilot",
         limitation="authenticity отсутствует; sentiment partially heuristic",
     ),
     DatasetRow(
@@ -43,6 +46,7 @@ CURRENT_DATASET_ROWS = (
         domain="hospitality",
         label_type="truthful/deceptive labels",
         task="Authenticity",
+        evidence_status="adapter planned; not prepared locally",
         limitation="planned extension; raw text not prepared locally",
     ),
     DatasetRow(
@@ -52,6 +56,7 @@ CURRENT_DATASET_ROWS = (
         domain="local commerce",
         label_type="silver fraud labels",
         task="Authenticity",
+        evidence_status="adapter ready; local text export missing",
         limitation="adapter ready, local text export not prepared",
     ),
     DatasetRow(
@@ -61,6 +66,7 @@ CURRENT_DATASET_ROWS = (
         domain="hospitality",
         label_type="sentiment + AI-generated authenticity",
         task="Sentiment + Authenticity",
+        evidence_status="prepared locally; executed in legacy pilot",
         limitation="current authenticity evidence comes only from this family",
     ),
 )
@@ -307,6 +313,7 @@ def build_article_results_markdown(
                     str(size),
                     row.label_type,
                     row.task,
+                    row.evidence_status,
                     row.limitation,
                 ]
             )
@@ -415,19 +422,29 @@ def build_article_results_markdown(
             "",
             "Этот файл собирается автоматически из текущих отчетов и служит canonical article-facing appendix для текущего snapshot.",
             "",
+            "## Граница доказательной базы",
+            "",
+            "- Таблицы 2--4 ниже опираются на **completed legacy pilot package** `pilot1k` и именно его следует считать текущим executed comparative evidence layer.",
+            "- Усиленный rerun `pilot1k_v2` уже частично присутствует в репозитории, но пока не завершён по всем multitask seeds и не имеет финального aggregated summary.",
+            "- Поэтому `pilot1k_v2` пока нельзя трактовать как replacement для legacy results; его статус отдельно отслеживается в `docs/pilot1k_v2_status_ru.md`.",
+            "",
             "## Источники",
             "",
             f"- pilot summary: `{pilot_summary_path}`",
             f"- statistics summary: `{statistics_summary_path}`",
             f"- balanced audit: `{balanced_audit_path}`",
             "",
-            "## Таблица 1. Снимок датасетов и текущего локального статуса",
+            "## Таблица 1. Снимок датасетов, локального статуса и статуса evidence",
             "",
-            "| Датасет | Язык | Домен | Размер локальной подготовки | Тип меток | Задача | Ограничения |",
-            "|---|---|---|---:|---|---|---|",
+            "| Датасет | Язык | Домен | Размер локальной подготовки | Тип меток | Задача | Evidence status | Ограничения |",
+            "|---|---|---|---:|---|---|---|---|",
             *dataset_rows,
             "",
-            "## Таблица 2. Основное сравнение моделей на выполненном pilot protocol",
+            "## Часть A. Выполненное legacy pilot evidence",
+            "",
+            "Ниже приведены именно те model comparisons, которые были полностью выполнены и агрегированы для `pilot1k`.",
+            "",
+            "## Таблица 2. Выполненное low-resource сравнение моделей (`pilot1k` legacy package)",
             "",
             "| Модель | Корпус | Задача | Accuracy | Macro-F1 | Weighted-F1 | Precision_macro | Recall_macro | Mean +/- Std | Значимость |",
             "|---|---|---|---:|---:|---:|---:|---:|---|---|",
@@ -445,7 +462,11 @@ def build_article_results_markdown(
             "|---|---|---:|---:|---:|---:|",
             *seed_rows,
             "",
-            "## Таблица 5. Расширенный balanced6k snapshot: data-readiness и leakage audit",
+            "## Часть B. Готовность усиленного rerun, но не новые model results",
+            "",
+            "Ниже идут только readiness artifacts. На `balanced6k` в этом appendix пока **не** приводятся выполненные model reruns.",
+            "",
+            "## Таблица 5. `balanced6k` как pre-rerun audit и readiness snapshot",
             "",
             f"- records: `{audit['records']}`",
             f"- source distribution: `rureviews={audit['source_distribution']['rureviews']}`, `perekrestok={audit['source_distribution']['perekrestok']}`, `maide_up={audit['source_distribution']['maide_up']}`",
@@ -453,7 +474,7 @@ def build_article_results_markdown(
             f"- duplicate summary: `exact={audit['duplicate_summary']['exact_duplicate_rows']}`, `normalized={audit['duplicate_summary']['normalized_duplicate_rows']}`",
             f"- authenticity source coverage: `maide_up={audit['label_coverage']['source']['authenticity']['maide_up']['label_coverage']:.1f}`, `rureviews={audit['label_coverage']['source']['authenticity']['rureviews']['label_coverage']:.1f}`, `perekrestok={audit['label_coverage']['source']['authenticity']['perekrestok']['label_coverage']:.1f}`",
             "",
-            "## Таблица 6. Классовый баланс и majority baseline на balanced6k test split",
+            "## Таблица 6. `balanced6k` pre-rerun class balance и majority baseline",
             "",
             "| Корпус | Задача | Класс | Число объектов | Доля |",
             "|---|---|---|---:|---:|",
@@ -475,10 +496,14 @@ def build_article_results_markdown(
             "",
             *[f"- {note}" for note in error_notes],
             "",
-            "## Что уже article-ready",
+            "## Что уже можно цитировать как выполненное evidence",
             "",
             "- pilot comparison `baseline / single-task / multitask` собран на одном фиксированном split;",
             "- для pilot уже есть `mean +/- std`, bootstrap CI и approximate randomization tests;",
+            "- representative confusion matrices уже показывают качественную структуру ошибок для completed pilot package.",
+            "",
+            "## Какие safeguards для усиленного rerun уже готовы",
+            "",
             "- balanced6k snapshot уже проходит leakage-safe split audit с нулевым `normalized_text_overlap` между split'ами;",
             "- provenance и label coverage теперь явно фиксируются в unified pipeline.",
             "",

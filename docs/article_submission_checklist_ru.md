@@ -5,7 +5,8 @@
 ## 1. Что уже готово
 
 - есть рабочий end-to-end pipeline `data -> training -> export -> API -> web UI`;
-- есть complete pilot package: `baseline`, `single-task`, `multitask`, `3-seed` summary, statistics, task ablation;
+- есть complete **legacy** pilot package: `baseline`, `single-task`, `multitask`, `3-seed` summary, statistics, task ablation;
+- есть in-progress strengthened rerun path `pilot1k_v2`, который пока нельзя выдавать за completed comparative package;
 - есть leakage-aware split logic и article-grade dataset audit;
 - есть локально собранные корпуса `joint_reviews.current.jsonl` и `joint_reviews.balanced6k.jsonl`;
 - есть основной русский текст статьи: [article_final_ru.md](/Users/diaskazikhanov/Desktop/aitu/nirm/docs/article_final_ru.md).
@@ -14,7 +15,7 @@
 
 ### Эксперименты
 
-- перегенерировать ключевые baseline / single-task / multitask runs под текущим протоколом `configs/model.pilot.yaml`;
+- завершить и агрегировать strengthened rerun под текущим протоколом `configs/model.pilot.yaml`;
 - либо сузить article scope до bounded pilot, либо добавить в реальные прогоны хотя бы один не-`MAiDE-up` authenticity benchmark;
 - собрать article-facing robustness package по `source`, `domain`, `language`;
 - закрыть или снять из narrative ablations `source-balanced vs naive` и `loss_weights`.
@@ -63,5 +64,5 @@
 1. central experimental claims опираются на реальные артефакты в `reports/` и `models/`;
 2. статья не обещает больше, чем покрывает текущий benchmark bundle;
 3. reproducibility docs совпадают с фактической средой и командами;
-4. pilot package либо честно позиционирован как bounded study, либо расширен до более широкого authenticity benchmark;
+4. legacy pilot package и strengthened rerun явно разведены, пока новый пакет не завершен полностью;
 5. все главные выводы в разделе результатов поддержаны таблицей, метрикой или рисунком в статье или в canonical appendix.

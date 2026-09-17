@@ -2,23 +2,34 @@
 
 This file is generated from the current report artifacts and serves as the canonical article-facing appendix for the current repository snapshot.
 
+## Evidence Boundary
+
+- Tables 2-4 below are based on the **completed legacy pilot package** `pilot1k` and should be treated as the current executed comparative evidence layer.
+- The strengthened rerun `pilot1k_v2` is already partially present in the repository, but it is not yet complete across all multitask seeds and does not yet have a final aggregated summary.
+- Tables 5-6 are therefore readiness artifacts for the stronger rerun path, not new balanced6k model evidence.
+- Because of that, `pilot1k_v2` should not yet be read as a replacement for the legacy article results; its status is tracked separately in [pilot1k_v2_status_en.md](/Users/diaskazikhanov/Desktop/aitu/nirm/docs/pilot1k_v2_status_en.md).
+
 ## Sources
 
 - pilot summary: `reports/multiseed/pilot1k/summary.json`
 - statistics summary: `reports/multiseed/pilot1k_statistics/statistics_summary.json`
 - balanced audit: `reports/audit/joint_reviews.balanced6k.audit.json`
 
-## Table 1. Dataset Snapshot and Current Local Status
+## Table 1. Dataset Snapshot, Local Status, and Evidence Status
 
-| Dataset | Language | Domain | Local Prepared Size | Label Type | Task | Current Limitation |
-|---|---|---|---:|---|---|---|
-| `RuReviews` | RU | e-commerce | 60602 | direct sentiment labels | Sentiment | no authenticity label coverage |
-| `Perekrestok Reviews` | RU | retail | 642682 | rating-derived sentiment | Sentiment | no authenticity labels; sentiment is partially heuristic |
-| `OpSpam` | EN | hospitality | not prepared locally | truthful/deceptive labels | Authenticity | planned extension; raw text not prepared locally |
-| `FraudDataset (Yelp)` | EN | local commerce | not prepared locally | silver fraud labels | Authenticity | adapter ready; local text export not prepared |
-| `MAiDE-up` | multilingual | hospitality | 19985 | sentiment + AI-generated authenticity | Sentiment + Authenticity | current authenticity evidence still comes only from this family |
+| Dataset | Language | Domain | Local Prepared Size | Label Type | Task | Evidence Status | Current Limitation |
+|---|---|---|---:|---|---|---|---|
+| `RuReviews` | RU | e-commerce | 60602 | direct sentiment labels | Sentiment | prepared locally; executed in legacy pilot | no authenticity label coverage |
+| `Perekrestok Reviews` | RU | retail | 642682 | rating-derived sentiment | Sentiment | prepared locally; not executed in reported pilot | no authenticity labels; sentiment is partially heuristic |
+| `OpSpam` | EN | hospitality | not prepared locally | truthful/deceptive labels | Authenticity | adapter planned; not prepared locally | planned extension; raw text not prepared locally |
+| `FraudDataset (Yelp)` | EN | local commerce | not prepared locally | silver fraud labels | Authenticity | adapter ready; local text export missing | adapter ready; local text export not prepared |
+| `MAiDE-up` | multilingual | hospitality | 19985 | sentiment + AI-generated authenticity | Sentiment + Authenticity | prepared locally; executed in legacy pilot | current authenticity evidence still comes only from this family |
 
-## Table 2. Main Model Comparison on the Executed Pilot Protocol
+## Part A. Executed Legacy Evidence
+
+The following tables are the completed and aggregated `pilot1k` model evidence.
+
+## Table 2. Executed Low-Resource Model Comparison (`pilot1k` Legacy Package)
 
 | Model | Corpus | Task | Accuracy | Macro-F1 | Weighted-F1 | Precision_macro | Recall_macro | Mean +/- Std | Significance Reading |
 |---|---|---|---:|---:|---:|---:|---:|---|---|
@@ -47,7 +58,11 @@ This file is generated from the current report artifacts and serves as the canon
 | Single-task Transformer | Authenticity | 0.8400 | 0.0954 | 0.8328 | 0.1075 |
 | Multitask Transformer | Authenticity | 0.9167 | 0.0513 | 0.9160 | 0.0524 |
 
-## Table 5. Expanded Balanced6k Snapshot: Data Readiness and Leakage Audit
+## Part B. Strengthened Rerun Readiness Only
+
+The following tables are readiness artifacts only. No `balanced6k` model reruns are reported in this appendix yet.
+
+## Table 5. `balanced6k` Pre-Rerun Audit and Readiness Snapshot
 
 - records: `6000`
 - source distribution: `rureviews=2500`, `perekrestok=2500`, `maide_up=1000`
@@ -55,7 +70,7 @@ This file is generated from the current report artifacts and serves as the canon
 - duplicate summary: `exact=81`, `normalized=97`
 - authenticity source coverage: `maide_up=1.0`, `rureviews=0.0`, `perekrestok=0.0`
 
-## Table 6. Class Balance and Majority Baseline on the Balanced6k Test Split
+## Table 6. `balanced6k` Pre-Rerun Class Balance and Majority Baseline
 
 | Corpus | Task | Class | Count | Share |
 |---|---|---|---:|---:|
@@ -118,12 +133,16 @@ This file is generated from the current report artifacts and serves as the canon
 - the multitask authenticity model misses only `1` fake review on the representative pilot checkpoint;
 - the single-task authenticity model overpredicts `fake`, producing `27` `authentic -> fake` errors.
 
-## What Is Already Article-Ready
+## What Is Already Citable as Executed Evidence
 
-- the pilot comparison `baseline / single-task / multitask` is aligned to one fixed split;
-- the pilot already has `mean +/- std`, bootstrap confidence intervals, and approximate randomization tests;
-- the `balanced6k` snapshot already passes leakage-safe split audit with zero normalized-text overlap across splits;
-- provenance and label coverage are now explicit parts of the unified pipeline.
+- the `baseline / single-task / multitask` pilot comparison is complete on one fixed split;
+- the pilot package already includes `mean +/- std`, bootstrap confidence intervals, and approximate randomization tests;
+- the confusion matrices already show the qualitative structure of pilot model errors.
+
+## What Is Already in Place for the Stronger Rerun
+
+- the `balanced6k` snapshot already passes a leakage-safe split audit with zero `normalized_text_overlap` across splits;
+- provenance and label coverage are now explicit in the unified pipeline.
 
 ## What Still Prevents a Genuine 10/10 Rating
 

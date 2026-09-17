@@ -7,6 +7,10 @@ sentiment:
     - name: perekrestok_reviews
       source: https://huggingface.co/datasets/lapki/perekrestok-reviews
       label_strategy: derive_3class_sentiment_from_rating
+    - name: wildberries_reviews
+      source: https://huggingface.co/datasets/Hplss/wb-review-dataset
+      label_strategy: derive_3class_sentiment_from_rating
+      license: CC-BY-NC-SA-4.0
     - name: kazsandra
       source: https://github.com/IS2AI/KazSAnDRA
       label_strategy: polarity_or_score_mapping

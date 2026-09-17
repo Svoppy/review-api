@@ -251,7 +251,10 @@ def test_build_article_results_markdown_includes_core_sections(tmp_path: Path) -
     )
 
     assert "# Пакет итоговых таблиц статьи" in markdown
-    assert "## Таблица 2. Основное сравнение моделей" in markdown
+    assert "## Граница доказательной базы" in markdown
+    assert "`pilot1k_v2`" in markdown
+    assert "## Часть A. Выполненное legacy pilot evidence" in markdown
+    assert "## Таблица 2. Выполненное low-resource сравнение моделей" in markdown
     assert "`RuReviews`" in markdown
     assert "лучше single-task и baseline" in markdown
     assert "balanced6k" in markdown

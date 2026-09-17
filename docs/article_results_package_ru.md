@@ -2,23 +2,33 @@
 
 Этот файл собирается автоматически из текущих отчетов и служит canonical article-facing appendix для текущего snapshot.
 
+## Граница доказательной базы
+
+- Таблицы 2--4 ниже опираются на **completed legacy pilot package** `pilot1k` и именно его следует считать текущим executed comparative evidence layer.
+- Усиленный rerun `pilot1k_v2` уже частично присутствует в репозитории, но пока не завершён по всем multitask seeds и не имеет финального aggregated summary.
+- Поэтому `pilot1k_v2` пока нельзя трактовать как replacement для legacy results; его статус отдельно отслеживается в `docs/pilot1k_v2_status_ru.md`.
+
 ## Источники
 
 - pilot summary: `reports/multiseed/pilot1k/summary.json`
 - statistics summary: `reports/multiseed/pilot1k_statistics/statistics_summary.json`
 - balanced audit: `reports/audit/joint_reviews.balanced6k.audit.json`
 
-## Таблица 1. Снимок датасетов и текущего локального статуса
+## Таблица 1. Снимок датасетов, локального статуса и статуса evidence
 
-| Датасет | Язык | Домен | Размер локальной подготовки | Тип меток | Задача | Ограничения |
-|---|---|---|---:|---|---|---|
-| `RuReviews` | RU | e-commerce | 60602 | готовые sentiment labels | Sentiment | нет authenticity label coverage |
-| `Perekrestok Reviews` | RU | retail | 642682 | rating-derived sentiment | Sentiment | authenticity отсутствует; sentiment partially heuristic |
-| `OpSpam` | EN | hospitality | not prepared locally | truthful/deceptive labels | Authenticity | planned extension; raw text not prepared locally |
-| `FraudDataset (Yelp)` | EN | local commerce | not prepared locally | silver fraud labels | Authenticity | adapter ready, local text export not prepared |
-| `MAiDE-up` | multilingual | hospitality | 19985 | sentiment + AI-generated authenticity | Sentiment + Authenticity | current authenticity evidence comes only from this family |
+| Датасет | Язык | Домен | Размер локальной подготовки | Тип меток | Задача | Evidence status | Ограничения |
+|---|---|---|---:|---|---|---|---|
+| `RuReviews` | RU | e-commerce | 60602 | готовые sentiment labels | Sentiment | prepared locally; executed in legacy pilot | нет authenticity label coverage |
+| `Perekrestok Reviews` | RU | retail | 642682 | rating-derived sentiment | Sentiment | prepared locally; not executed in reported pilot | authenticity отсутствует; sentiment partially heuristic |
+| `OpSpam` | EN | hospitality | not prepared locally | truthful/deceptive labels | Authenticity | adapter planned; not prepared locally | planned extension; raw text not prepared locally |
+| `FraudDataset (Yelp)` | EN | local commerce | not prepared locally | silver fraud labels | Authenticity | adapter ready; local text export missing | adapter ready, local text export not prepared |
+| `MAiDE-up` | multilingual | hospitality | 19985 | sentiment + AI-generated authenticity | Sentiment + Authenticity | prepared locally; executed in legacy pilot | current authenticity evidence comes only from this family |
 
-## Таблица 2. Основное сравнение моделей на выполненном pilot protocol
+## Часть A. Выполненное legacy pilot evidence
+
+Ниже приведены именно те model comparisons, которые были полностью выполнены и агрегированы для `pilot1k`.
+
+## Таблица 2. Выполненное low-resource сравнение моделей (`pilot1k` legacy package)
 
 | Модель | Корпус | Задача | Accuracy | Macro-F1 | Weighted-F1 | Precision_macro | Recall_macro | Mean +/- Std | Значимость |
 |---|---|---|---:|---:|---:|---:|---:|---|---|
@@ -47,7 +57,11 @@
 | Single-task Transformer | Authenticity | 0.8400 | 0.0954 | 0.8328 | 0.1075 |
 | Multitask Transformer | Authenticity | 0.9167 | 0.0513 | 0.9160 | 0.0524 |
 
-## Таблица 5. Расширенный balanced6k snapshot: data-readiness и leakage audit
+## Часть B. Готовность усиленного rerun, но не новые model results
+
+Ниже идут только readiness artifacts. На `balanced6k` в этом appendix пока **не** приводятся выполненные model reruns.
+
+## Таблица 5. `balanced6k` как pre-rerun audit и readiness snapshot
 
 - records: `6000`
 - source distribution: `rureviews=2500`, `perekrestok=2500`, `maide_up=1000`
@@ -55,7 +69,7 @@
 - duplicate summary: `exact=81`, `normalized=97`
 - authenticity source coverage: `maide_up=1.0`, `rureviews=0.0`, `perekrestok=0.0`
 
-## Таблица 6. Классовый баланс и majority baseline на balanced6k test split
+## Таблица 6. `balanced6k` pre-rerun class balance и majority baseline
 
 | Корпус | Задача | Класс | Число объектов | Доля |
 |---|---|---|---:|---:|
@@ -118,10 +132,14 @@
 - multitask authenticity пропускает только `1` fake-review на representative pilot-checkpoint;
 - single-task authenticity переоценивает класс `fake`, давая `27` ошибок `authentic -> fake`;
 
-## Что уже article-ready
+## Что уже можно цитировать как выполненное evidence
 
 - pilot comparison `baseline / single-task / multitask` собран на одном фиксированном split;
 - для pilot уже есть `mean +/- std`, bootstrap CI и approximate randomization tests;
+- representative confusion matrices уже показывают качественную структуру ошибок для completed pilot package.
+
+## Какие safeguards для усиленного rerun уже готовы
+
 - balanced6k snapshot уже проходит leakage-safe split audit с нулевым `normalized_text_overlap` между split'ами;
 - provenance и label coverage теперь явно фиксируются в unified pipeline.
 

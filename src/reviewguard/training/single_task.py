@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import copy
+import math
+import random
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import torch
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset
-from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer
+from transformers import AutoConfig, AutoModelForSequenceClassification, AutoTokenizer, get_scheduler
 
 from reviewguard.training.export import ensure_export_dir, write_json
 from reviewguard.training.metrics import compute_task_metrics, label_field_for_task
@@ -16,12 +19,17 @@ from reviewguard.training.single_task_config import (
     TASK_LABELS,
     SingleTaskTrainingConfig,
 )
+from reviewguard.training.runtime import resolve_training_device
 
 
 def seed_training_runtime(random_state: int) -> None:
+    random.seed(random_state)
+    np.random.seed(random_state)
     torch.manual_seed(random_state)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(random_state)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
 
 def labeled_records_for_task(records: list[dict[str, Any]], task: str) -> list[dict[str, Any]]:
@@ -77,6 +85,8 @@ class SingleTaskTransformerTrainer:
     def __init__(self, config: SingleTaskTrainingConfig) -> None:
         if config.task not in TASK_LABELS:
             raise ValueError(f"Unsupported task: {config.task}")
+        if config.gradient_accumulation_steps < 1:
+            raise ValueError("gradient_accumulation_steps must be at least 1.")
 
         self.config = config
         self.task = config.task
@@ -102,7 +112,10 @@ class SingleTaskTransformerTrainer:
             self.config.model_name,
             config=model_config,
         )
-        self.device = torch.device(self.config.device)
+        if self.config.gradient_checkpointing:
+            self.model.gradient_checkpointing_enable()
+        self.runtime_device = resolve_training_device(self.config.device)
+        self.device = torch.device(self.runtime_device.resolved)
         self.model.to(self.device)
 
     def _make_loader(
@@ -158,6 +171,18 @@ class SingleTaskTransformerTrainer:
             shuffle=True,
             include_labels=True,
         )
+        optimizer_steps_per_epoch = max(
+            math.ceil(len(train_loader) / self.config.gradient_accumulation_steps),
+            1,
+        )
+        total_training_steps = optimizer_steps_per_epoch * self.config.epochs
+        warmup_steps = int(total_training_steps * self.config.warmup_ratio)
+        scheduler = get_scheduler(
+            self.config.scheduler_type,
+            optimizer=optimizer,
+            num_warmup_steps=warmup_steps,
+            num_training_steps=total_training_steps,
+        )
         history: list[dict[str, Any]] = []
         best_validation_score: float | None = None
         best_state_dict: dict[str, Any] | None = None
@@ -167,10 +192,12 @@ class SingleTaskTransformerTrainer:
             self.model.train()
             epoch_loss = 0.0
             batch_count = 0
+            optimizer_steps = 0
+            total_batches = len(train_loader)
+            optimizer.zero_grad(set_to_none=True)
 
-            for batch in train_loader:
+            for batch_index, batch in enumerate(train_loader):
                 batch = {name: tensor.to(self.device) for name, tensor in batch.items()}
-                optimizer.zero_grad()
                 outputs = self.model(
                     input_ids=batch["input_ids"],
                     attention_mask=batch["attention_mask"],
@@ -180,8 +207,25 @@ class SingleTaskTransformerTrainer:
                     batch["labels"],
                     weight=class_weights.to(self.device) if class_weights is not None else None,
                 )
-                loss.backward()
-                optimizer.step()
+                accumulation_window = min(
+                    self.config.gradient_accumulation_steps,
+                    total_batches - batch_index,
+                )
+                (loss / accumulation_window).backward()
+                should_step = (
+                    (batch_index + 1) % self.config.gradient_accumulation_steps == 0
+                    or batch_index + 1 == total_batches
+                )
+                if should_step:
+                    if self.config.max_grad_norm is not None:
+                        torch.nn.utils.clip_grad_norm_(
+                            self.model.parameters(),
+                            self.config.max_grad_norm,
+                        )
+                    optimizer.step()
+                    scheduler.step()
+                    optimizer.zero_grad(set_to_none=True)
+                    optimizer_steps += 1
 
                 epoch_loss += float(loss.item())
                 batch_count += 1
@@ -190,6 +234,8 @@ class SingleTaskTransformerTrainer:
                 "epoch": epoch,
                 "train_loss": epoch_loss / max(batch_count, 1),
                 "labeled_examples": len(labeled_train_records),
+                "optimizer_steps": optimizer_steps,
+                "learning_rate_end": float(optimizer.param_groups[0]["lr"]),
             }
             if valid_records:
                 validation_metrics = self.evaluate(valid_records)
@@ -291,10 +337,16 @@ class SingleTaskTransformerTrainer:
                 "learning_rate": self.config.learning_rate,
                 "weight_decay": self.config.weight_decay,
                 "epochs": self.config.epochs,
+                "warmup_ratio": self.config.warmup_ratio,
+                "scheduler_type": self.config.scheduler_type,
+                "max_grad_norm": self.config.max_grad_norm,
+                "gradient_accumulation_steps": self.config.gradient_accumulation_steps,
+                "gradient_checkpointing": self.config.gradient_checkpointing,
                 "dropout": self.config.dropout,
                 "class_weight_mode": self.config.class_weight_mode,
                 "early_stopping_patience": self.config.early_stopping_patience,
-                "device": self.config.device,
+                "device_requested": self.runtime_device.requested,
+                "device_effective": self.runtime_device.resolved,
                 "random_state": self.config.random_state,
             },
             "history": getattr(self, "history", []),

@@ -25,8 +25,13 @@ class SingleTaskTrainingConfig:
     learning_rate: float = 2e-5
     weight_decay: float = 0.01
     epochs: int = 4
+    warmup_ratio: float = 0.1
+    scheduler_type: str = "linear"
+    max_grad_norm: float | None = 1.0
+    gradient_accumulation_steps: int = 1
+    gradient_checkpointing: bool = False
     dropout: float = 0.1
     class_weight_mode: str = "balanced"
     early_stopping_patience: int | None = 2
-    device: str = "cpu"
+    device: str = "auto"
     random_state: int = 42

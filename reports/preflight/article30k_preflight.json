@@ -1,0 +1,735 @@
+{
+  "kind": "article_training_preflight",
+  "data_ready_for_training": true,
+  "ready_to_train": false,
+  "claim_scope": "controlled mixed-source study with single-source authenticity evidence",
+  "input": {
+    "path": "data/processed/joint_reviews.article30k.jsonl",
+    "sha256": "a296cf7bb8cb0dbb3eebd8a0cc9c478422e9f5959836bc4d20915f9f81c9c5fc",
+    "records": 30000
+  },
+  "config": {
+    "path": "configs/model.article.yaml",
+    "sha256": "c375de87bccebbf23081b6da7090f47f7d006ed27e831d3aeaeeea7b70a94a80",
+    "model_name": "FacebookAI/xlm-roberta-base",
+    "pooling": "cls",
+    "head_type": "mlp"
+  },
+  "split_seed": 42,
+  "split_sizes": {
+    "train": 23975,
+    "valid": 3013,
+    "test": 3012
+  },
+  "test_support": {
+    "sentiment": {
+      "class_counts": {
+        "negative": 710,
+        "neutral": 204,
+        "positive": 2098
+      },
+      "minimum_class_support": 204,
+      "source_counts": {
+        "maide_up": 700,
+        "perekrestok": 1014,
+        "rureviews": 298,
+        "wildberries": 1000
+      }
+    },
+    "authenticity": {
+      "class_counts": {
+        "authentic": 350,
+        "fake": 350
+      },
+      "minimum_class_support": 350,
+      "source_counts": {
+        "maide_up": 700
+      }
+    }
+  },
+  "checks": {
+    "zero_cross_split_overlap": true,
+    "sentiment_minimum_class_support": true,
+    "authenticity_minimum_class_support": true,
+    "multitask_architecture_explicit": true,
+    "model_name_explicit": true
+  },
+  "execution_checks": {
+    "device_configuration_valid": true,
+    "accelerator_requirement_satisfied": false
+  },
+  "warnings": [
+    "Detected 564 normalized duplicate rows in the merged corpus; group-aware splitting is recommended.",
+    "Corpus mixes multiple domains; cross-domain robustness should be reported separately from aggregate scores.",
+    "Corpus mixes multiple languages; language-aware evaluation is required for strong claims.",
+    "Authenticity labels in the test split come from fewer than two sources; this run can support a controlled single-source authenticity claim, not a multi-benchmark generalization claim.",
+    "The selected article configuration requires CUDA or Apple Metal, but no supported accelerator is available in this runtime."
+  ],
+  "git": {
+    "commit": "47481b8613ca55159ba512329a82c37f113aa1c2",
+    "dirty": true,
+    "changed_paths": [
+      "M README.md",
+      " M configs/datasets.yaml",
+      " M configs/model.multitask.yaml",
+      " M configs/model.pilot.yaml",
+      " M data/README.md",
+      " M docs/article_draft_en.md",
+      " M docs/article_draft_ru.md",
+      " M docs/article_final_en.tex",
+      " M docs/article_final_ru.md",
+      " M docs/article_results_package_en.md",
+      " M docs/article_results_package_ru.md",
+      " M docs/article_submission_checklist_en.md",
+      " M docs/article_submission_checklist_ru.md",
+      " M docs/final_experiment_runbook_ru.md",
+      " M docs/reproducibility_note_en.md",
+      " M docs/reproducibility_note_ru.md",
+      " M scripts/analyze_multiseed_statistics.py",
+      " M scripts/download_public_datasets.py",
+      " M scripts/run_multiseed_experiments.py",
+      " M src/reviewguard/analysis/article_tables.py",
+      " M src/reviewguard/analysis/statistics.py",
+      " M src/reviewguard/data/__init__.py",
+      " M src/reviewguard/data/pipeline.py",
+      " M src/reviewguard/ml/modeling.py",
+      " M src/reviewguard/training/__main__.py",
+      " M src/reviewguard/training/multitask.py",
+      " M src/reviewguard/training/single_task.py",
+      " M src/reviewguard/training/single_task_config.py",
+      " M tests/test_article_tables.py",
+      " M tests/test_data_pipeline.py",
+      " M tests/test_statistics_analysis.py",
+      " M tests/test_training_metrics.py",
+      "?? configs/model.article.yaml",
+      "?? docs/article_draft_en.docx",
+      "?? docs/article_final_en.docx",
+      "?? docs/pilot1k_v2_status_en.md",
+      "?? docs/pilot1k_v2_status_ru.md",
+      "?? reports/audit/joint_reviews.article20k.audit.json",
+      "?? reports/audit/joint_reviews.article30k.audit.json",
+      "?? reports/audit/joint_reviews.maide7k.audit.json",
+      "?? reports/audit/wildberries.audit.json",
+      "?? reports/diagnostics/",
+      "?? reports/preflight/",
+      "?? scripts/build_article_benchmark.py",
+      "?? scripts/build_article_docx.py",
+      "?? scripts/build_error_analysis_report.py",
+      "?? scripts/build_learning_curve_corpora.py",
+      "?? scripts/preflight_article_experiment.py",
+      "?? scripts/probe_gradient_conflict.py",
+      "?? scripts/run_article_release.py",
+      "?? scripts/run_experiment_matrix.py",
+      "?? src/reviewguard/training/runtime.py",
+      "?? tests/test_article_preflight.py",
+      "?? tests/test_article_release.py",
+      "?? tests/test_training_runtime.py"
+    ]
+  },
+  "runtime": {
+    "python": "3.14.2",
+    "platform": "macOS-26.2-arm64-arm-64bit-Mach-O",
+    "training_device": {
+      "requested": "auto",
+      "effective": "cpu",
+      "accelerator_available": false,
+      "requires_accelerator": true,
+      "resolution_error": null
+    }
+  },
+  "audit": {
+    "input_path": "data/processed/joint_reviews.article30k.jsonl",
+    "input_sha256": "a296cf7bb8cb0dbb3eebd8a0cc9c478422e9f5959836bc4d20915f9f81c9c5fc",
+    "random_state": 42,
+    "records": 30000,
+    "duplicate_summary": {
+      "exact_duplicate_rows": 521,
+      "normalized_duplicate_rows": 564,
+      "unique_exact_texts": 29479,
+      "unique_normalized_texts": 29436
+    },
+    "source_distribution": {
+      "maide_up": 7000,
+      "perekrestok": 10000,
+      "wildberries": 10000,
+      "rureviews": 3000
+    },
+    "domain_distribution": {
+      "hospitality": 7000,
+      "ecommerce": 23000
+    },
+    "language_distribution": {
+      "tr": 682,
+      "ru": 23734,
+      "fr": 706,
+      "ko": 711,
+      "en": 692,
+      "zh": 670,
+      "es": 693,
+      "it": 699,
+      "de": 724,
+      "ro": 689
+    },
+    "label_coverage": {
+      "source": {
+        "sentiment": {
+          "maide_up": {
+            "records": 7000,
+            "labeled_records": 7000,
+            "counts": {
+              "negative": 3522,
+              "neutral": 0,
+              "positive": 3478
+            },
+            "label_coverage": 1.0
+          },
+          "perekrestok": {
+            "records": 10000,
+            "labeled_records": 10000,
+            "counts": {
+              "negative": 377,
+              "neutral": 1200,
+              "positive": 8423
+            },
+            "label_coverage": 1.0
+          },
+          "rureviews": {
+            "records": 3000,
+            "labeled_records": 3000,
+            "counts": {
+              "negative": 1483,
+              "neutral": 2,
+              "positive": 1515
+            },
+            "label_coverage": 1.0
+          },
+          "wildberries": {
+            "records": 10000,
+            "labeled_records": 10000,
+            "counts": {
+              "negative": 1721,
+              "neutral": 828,
+              "positive": 7451
+            },
+            "label_coverage": 1.0
+          }
+        },
+        "authenticity": {
+          "maide_up": {
+            "records": 7000,
+            "labeled_records": 7000,
+            "counts": {
+              "authentic": 3500,
+              "fake": 3500
+            },
+            "label_coverage": 1.0
+          },
+          "perekrestok": {
+            "records": 10000,
+            "labeled_records": 0,
+            "counts": {
+              "authentic": 0,
+              "fake": 0
+            },
+            "label_coverage": 0.0
+          },
+          "rureviews": {
+            "records": 3000,
+            "labeled_records": 0,
+            "counts": {
+              "authentic": 0,
+              "fake": 0
+            },
+            "label_coverage": 0.0
+          },
+          "wildberries": {
+            "records": 10000,
+            "labeled_records": 0,
+            "counts": {
+              "authentic": 0,
+              "fake": 0
+            },
+            "label_coverage": 0.0
+          }
+        }
+      },
+      "language": {
+        "sentiment": {
+          "de": {
+            "records": 724,
+            "labeled_records": 724,
+            "counts": {
+              "negative": 372,
+              "neutral": 0,
+              "positive": 352
+            },
+            "label_coverage": 1.0
+          },
+          "en": {
+            "records": 692,
+            "labeled_records": 692,
+            "counts": {
+              "negative": 340,
+              "neutral": 0,
+              "positive": 352
+            },
+            "label_coverage": 1.0
+          },
+          "es": {
+            "records": 693,
+            "labeled_records": 693,
+            "counts": {
+              "negative": 342,
+              "neutral": 0,
+              "positive": 351
+            },
+            "label_coverage": 1.0
+          },
+          "fr": {
+            "records": 706,
+            "labeled_records": 706,
+            "counts": {
+              "negative": 351,
+              "neutral": 0,
+              "positive": 355
+            },
+            "label_coverage": 1.0
+          },
+          "it": {
+            "records": 699,
+            "labeled_records": 699,
+            "counts": {
+              "negative": 350,
+              "neutral": 0,
+              "positive": 349
+            },
+            "label_coverage": 1.0
+          },
+          "ko": {
+            "records": 711,
+            "labeled_records": 711,
+            "counts": {
+              "negative": 387,
+              "neutral": 0,
+              "positive": 324
+            },
+            "label_coverage": 1.0
+          },
+          "ro": {
+            "records": 689,
+            "labeled_records": 689,
+            "counts": {
+              "negative": 338,
+              "neutral": 0,
+              "positive": 351
+            },
+            "label_coverage": 1.0
+          },
+          "ru": {
+            "records": 23734,
+            "labeled_records": 23734,
+            "counts": {
+              "negative": 3958,
+              "neutral": 2030,
+              "positive": 17746
+            },
+            "label_coverage": 1.0
+          },
+          "tr": {
+            "records": 682,
+            "labeled_records": 682,
+            "counts": {
+              "negative": 342,
+              "neutral": 0,
+              "positive": 340
+            },
+            "label_coverage": 1.0
+          },
+          "zh": {
+            "records": 670,
+            "labeled_records": 670,
+            "counts": {
+              "negative": 323,
+              "neutral": 0,
+              "positive": 347
+            },
+            "label_coverage": 1.0
+          }
+        },
+        "authenticity": {
+          "de": {
+            "records": 724,
+            "labeled_records": 724,
+            "counts": {
+              "authentic": 354,
+              "fake": 370
+            },
+            "label_coverage": 1.0
+          },
+          "en": {
+            "records": 692,
+            "labeled_records": 692,
+            "counts": {
+              "authentic": 354,
+              "fake": 338
+            },
+            "label_coverage": 1.0
+          },
+          "es": {
+            "records": 693,
+            "labeled_records": 693,
+            "counts": {
+              "authentic": 352,
+              "fake": 341
+            },
+            "label_coverage": 1.0
+          },
+          "fr": {
+            "records": 706,
+            "labeled_records": 706,
+            "counts": {
+              "authentic": 355,
+              "fake": 351
+            },
+            "label_coverage": 1.0
+          },
+          "it": {
+            "records": 699,
+            "labeled_records": 699,
+            "counts": {
+              "authentic": 353,
+              "fake": 346
+            },
+            "label_coverage": 1.0
+          },
+          "ko": {
+            "records": 711,
+            "labeled_records": 711,
+            "counts": {
+              "authentic": 377,
+              "fake": 334
+            },
+            "label_coverage": 1.0
+          },
+          "ro": {
+            "records": 689,
+            "labeled_records": 689,
+            "counts": {
+              "authentic": 335,
+              "fake": 354
+            },
+            "label_coverage": 1.0
+          },
+          "ru": {
+            "records": 23734,
+            "labeled_records": 734,
+            "counts": {
+              "authentic": 376,
+              "fake": 358
+            },
+            "label_coverage": 0.03092609758152861
+          },
+          "tr": {
+            "records": 682,
+            "labeled_records": 682,
+            "counts": {
+              "authentic": 327,
+              "fake": 355
+            },
+            "label_coverage": 1.0
+          },
+          "zh": {
+            "records": 670,
+            "labeled_records": 670,
+            "counts": {
+              "authentic": 317,
+              "fake": 353
+            },
+            "label_coverage": 1.0
+          }
+        }
+      },
+      "domain": {
+        "sentiment": {
+          "ecommerce": {
+            "records": 23000,
+            "labeled_records": 23000,
+            "counts": {
+              "negative": 3581,
+              "neutral": 2030,
+              "positive": 17389
+            },
+            "label_coverage": 1.0
+          },
+          "hospitality": {
+            "records": 7000,
+            "labeled_records": 7000,
+            "counts": {
+              "negative": 3522,
+              "neutral": 0,
+              "positive": 3478
+            },
+            "label_coverage": 1.0
+          }
+        },
+        "authenticity": {
+          "ecommerce": {
+            "records": 23000,
+            "labeled_records": 0,
+            "counts": {
+              "authentic": 0,
+              "fake": 0
+            },
+            "label_coverage": 0.0
+          },
+          "hospitality": {
+            "records": 7000,
+            "labeled_records": 7000,
+            "counts": {
+              "authentic": 3500,
+              "fake": 3500
+            },
+            "label_coverage": 1.0
+          }
+        }
+      }
+    },
+    "split_sizes": {
+      "train": 23975,
+      "valid": 3013,
+      "test": 3012
+    },
+    "split_overlap": {
+      "train_vs_valid": {
+        "exact_text_overlap": 0,
+        "record_id_overlap": 0,
+        "normalized_text_overlap": 0
+      },
+      "train_vs_test": {
+        "exact_text_overlap": 0,
+        "record_id_overlap": 0,
+        "normalized_text_overlap": 0
+      },
+      "valid_vs_test": {
+        "exact_text_overlap": 0,
+        "record_id_overlap": 0,
+        "normalized_text_overlap": 0
+      }
+    },
+    "tasks": {
+      "sentiment": {
+        "train_distribution": {
+          "labeled_records": 23975,
+          "counts": {
+            "negative": 5682,
+            "neutral": 1623,
+            "positive": 16670
+          },
+          "proportions": {
+            "negative": 0.2369968717413973,
+            "neutral": 0.06769551616266944,
+            "positive": 0.6953076120959333
+          },
+          "majority_label": "positive",
+          "minority_label": "neutral",
+          "minimum_class_support": 1623
+        },
+        "validation_distribution": {
+          "labeled_records": 3013,
+          "counts": {
+            "negative": 711,
+            "neutral": 203,
+            "positive": 2099
+          },
+          "proportions": {
+            "negative": 0.23597743113176237,
+            "neutral": 0.067374709591769,
+            "positive": 0.6966478592764687
+          },
+          "majority_label": "positive",
+          "minority_label": "neutral",
+          "minimum_class_support": 203
+        },
+        "test_distribution": {
+          "labeled_records": 3012,
+          "counts": {
+            "negative": 710,
+            "neutral": 204,
+            "positive": 2098
+          },
+          "proportions": {
+            "negative": 0.2357237715803453,
+            "neutral": 0.06772908366533864,
+            "positive": 0.6965471447543161
+          },
+          "majority_label": "positive",
+          "minority_label": "neutral",
+          "minimum_class_support": 204
+        },
+        "warnings": [],
+        "majority_baseline": {
+          "validation": {
+            "accuracy": 0.6966478592764687,
+            "macro_f1": 0.2737350026082421,
+            "weighted_f1": 0.5720907107282112,
+            "precision_macro": 0.23221595309215623,
+            "recall_macro": 0.3333333333333333,
+            "support": 3013,
+            "per_label_support": {
+              "negative": 711,
+              "neutral": 203,
+              "positive": 2099
+            },
+            "confusion_matrix": [
+              [
+                0,
+                0,
+                711
+              ],
+              [
+                0,
+                0,
+                203
+              ],
+              [
+                0,
+                0,
+                2099
+              ]
+            ],
+            "majority_label": "positive"
+          },
+          "test": {
+            "accuracy": 0.6965471447543161,
+            "macro_f1": 0.2737116764514025,
+            "weighted_f1": 0.5719592601544248,
+            "precision_macro": 0.23218238158477203,
+            "recall_macro": 0.3333333333333333,
+            "support": 3012,
+            "per_label_support": {
+              "negative": 710,
+              "neutral": 204,
+              "positive": 2098
+            },
+            "confusion_matrix": [
+              [
+                0,
+                0,
+                710
+              ],
+              [
+                0,
+                0,
+                204
+              ],
+              [
+                0,
+                0,
+                2098
+              ]
+            ],
+            "majority_label": "positive"
+          }
+        }
+      },
+      "authenticity": {
+        "train_distribution": {
+          "labeled_records": 5599,
+          "counts": {
+            "authentic": 2799,
+            "fake": 2800
+          },
+          "proportions": {
+            "authentic": 0.4999106983389891,
+            "fake": 0.5000893016610108
+          },
+          "majority_label": "fake",
+          "minority_label": "authentic",
+          "minimum_class_support": 2799
+        },
+        "validation_distribution": {
+          "labeled_records": 701,
+          "counts": {
+            "authentic": 351,
+            "fake": 350
+          },
+          "proportions": {
+            "authentic": 0.5007132667617689,
+            "fake": 0.4992867332382311
+          },
+          "majority_label": "authentic",
+          "minority_label": "fake",
+          "minimum_class_support": 350
+        },
+        "test_distribution": {
+          "labeled_records": 700,
+          "counts": {
+            "authentic": 350,
+            "fake": 350
+          },
+          "proportions": {
+            "authentic": 0.5,
+            "fake": 0.5
+          },
+          "majority_label": "authentic",
+          "minority_label": "authentic",
+          "minimum_class_support": 350
+        },
+        "warnings": [],
+        "majority_baseline": {
+          "validation": {
+            "accuracy": 0.4992867332382311,
+            "macro_f1": 0.3330161750713606,
+            "weighted_f1": 0.332541116333741,
+            "precision_macro": 0.24964336661911554,
+            "recall_macro": 0.5,
+            "support": 701,
+            "per_label_support": {
+              "authentic": 351,
+              "fake": 350
+            },
+            "confusion_matrix": [
+              [
+                0,
+                351
+              ],
+              [
+                0,
+                350
+              ]
+            ],
+            "majority_label": "fake"
+          },
+          "test": {
+            "accuracy": 0.5,
+            "macro_f1": 0.3333333333333333,
+            "weighted_f1": 0.3333333333333333,
+            "precision_macro": 0.25,
+            "recall_macro": 0.5,
+            "support": 700,
+            "per_label_support": {
+              "authentic": 350,
+              "fake": 350
+            },
+            "confusion_matrix": [
+              [
+                0,
+                350
+              ],
+              [
+                0,
+                350
+              ]
+            ],
+            "majority_label": "fake"
+          }
+        }
+      }
+    },
+    "warnings": [
+      "Detected 564 normalized duplicate rows in the merged corpus; group-aware splitting is recommended.",
+      "Corpus mixes multiple domains; cross-domain robustness should be reported separately from aggregate scores.",
+      "Corpus mixes multiple languages; language-aware evaluation is required for strong claims."
+    ]
+  }
+}

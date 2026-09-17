@@ -6,6 +6,7 @@ from reviewguard.analysis.statistics import (
     approximate_randomization_test,
     mean_confidence_interval,
     metric_value,
+    paired_effect_size,
     paired_bootstrap_confidence_interval,
     paired_seed_delta,
 )
@@ -90,3 +91,11 @@ def test_bootstrap_and_randomization_return_bounded_statistics() -> None:
     assert interval["ci_low"] <= interval["ci_high"]
     assert 0.0 <= test_result["p_value"] <= 1.0
     assert test_result["observed_delta"] > 0.0
+
+
+def test_paired_effect_size_reports_cohens_dz_for_nonconstant_deltas() -> None:
+    effect = paired_effect_size([0.10, 0.20, 0.00, 0.15, 0.05])
+
+    assert effect["n"] == 5
+    assert effect["cohens_dz"] is not None
+    assert effect["hedges_g"] is not None

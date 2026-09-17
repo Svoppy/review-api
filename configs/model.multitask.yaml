@@ -16,6 +16,9 @@ train:
   learning_rate: 2.0e-5
   weight_decay: 0.01
   epochs: 4
+  warmup_ratio: 0.1
+  scheduler_type: linear
+  max_grad_norm: 1.0
   class_weight_mode: balanced
   train_sampler: source_balanced
   early_stopping_patience: 2
@@ -35,6 +38,9 @@ single_task:
     learning_rate: 2.0e-5
     weight_decay: 0.01
     epochs: 4
+    warmup_ratio: 0.1
+    scheduler_type: linear
+    max_grad_norm: 1.0
     class_weight_mode: balanced
     early_stopping_patience: 2
     random_state: 42

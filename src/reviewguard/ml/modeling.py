@@ -9,6 +9,10 @@ from torch import nn
 from transformers import AutoConfig, AutoModel
 
 
+SUPPORTED_POOLING = {"mean", "cls"}
+SUPPORTED_HEAD_TYPES = {"linear", "mlp"}
+
+
 @dataclass
 class MultiTaskOutput:
     sentiment_logits: torch.Tensor
@@ -27,20 +31,62 @@ class MultiTaskTransformer(nn.Module):
         dropout: float = 0.1,
         sentiment_loss_weight: float = 1.0,
         authenticity_loss_weight: float = 1.0,
+        pooling: str = "mean",
+        head_type: str = "linear",
     ) -> None:
         super().__init__()
+        if pooling not in SUPPORTED_POOLING:
+            raise ValueError(
+                f"Unsupported pooling={pooling!r}; expected one of {sorted(SUPPORTED_POOLING)}."
+            )
+        if head_type not in SUPPORTED_HEAD_TYPES:
+            raise ValueError(
+                f"Unsupported head_type={head_type!r}; expected one of {sorted(SUPPORTED_HEAD_TYPES)}."
+            )
         config = AutoConfig.from_pretrained(model_name)
         self.encoder = AutoModel.from_pretrained(model_name, config=config)
         hidden_size = config.hidden_size
 
         self.dropout = nn.Dropout(dropout)
-        self.sentiment_head = nn.Linear(hidden_size, sentiment_num_labels)
-        self.authenticity_head = nn.Linear(hidden_size, authenticity_num_labels)
+        self.sentiment_head = self._build_head(
+            hidden_size,
+            sentiment_num_labels,
+            dropout=dropout,
+            head_type=head_type,
+        )
+        self.authenticity_head = self._build_head(
+            hidden_size,
+            authenticity_num_labels,
+            dropout=dropout,
+            head_type=head_type,
+        )
         self.sentiment_loss_weight = sentiment_loss_weight
         self.authenticity_loss_weight = authenticity_loss_weight
         self.encoder_model_name = model_name
+        self.pooling = pooling
+        self.head_type = head_type
+
+    @staticmethod
+    def _build_head(
+        hidden_size: int,
+        num_labels: int,
+        *,
+        dropout: float,
+        head_type: str,
+    ) -> nn.Module:
+        if head_type == "linear":
+            return nn.Linear(hidden_size, num_labels)
+        return nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_size, num_labels),
+        )
 
     def _pool(self, last_hidden_state: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+        if self.pooling == "cls":
+            return last_hidden_state[:, 0]
+
         # Mean pooling is more stable across encoder families than relying on CLS conventions.
         mask = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
         masked = last_hidden_state * mask
@@ -117,6 +163,10 @@ class MultiTaskTransformer(nn.Module):
             "sentiment_labels": sentiment_labels,
             "authenticity_labels": authenticity_labels,
             "max_length": max_length,
+            "architecture": {
+                "pooling": self.pooling,
+                "head_type": self.head_type,
+            },
         }
         (checkpoint_path / "metadata.json").write_text(json.dumps(metadata, indent=2))
 
@@ -125,11 +175,14 @@ class MultiTaskTransformer(nn.Module):
         checkpoint_path = Path(checkpoint_dir)
         metadata = json.loads((checkpoint_path / "metadata.json").read_text())
         encoder_dir = checkpoint_path / metadata.get("encoder_dir", "encoder")
+        architecture = metadata.get("architecture") or {}
 
         model = cls(
             model_name=str(encoder_dir),
             sentiment_num_labels=len(metadata["sentiment_labels"]),
             authenticity_num_labels=len(metadata["authenticity_labels"]),
+            pooling=str(architecture.get("pooling", "mean")),
+            head_type=str(architecture.get("head_type", "linear")),
         )
         state_dict = torch.load(checkpoint_path / "model.pt", map_location="cpu")
         model.load_state_dict(state_dict)

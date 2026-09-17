@@ -1,0 +1,289 @@
+{
+  "input_path": "data/processed/wildberries.jsonl",
+  "input_sha256": "788528d20837b5f79c62710328435be7da42c38121ceb3ac8658238cf41a4786",
+  "random_state": 42,
+  "records": 27248,
+  "duplicate_summary": {
+    "exact_duplicate_rows": 0,
+    "normalized_duplicate_rows": 0,
+    "unique_exact_texts": 27248,
+    "unique_normalized_texts": 27248
+  },
+  "source_distribution": {
+    "wildberries": 27248
+  },
+  "domain_distribution": {
+    "ecommerce": 27248
+  },
+  "language_distribution": {
+    "ru": 27248
+  },
+  "label_coverage": {
+    "source": {
+      "sentiment": {
+        "wildberries": {
+          "records": 27248,
+          "labeled_records": 27248,
+          "counts": {
+            "negative": 4565,
+            "neutral": 2280,
+            "positive": 20403
+          },
+          "label_coverage": 1.0
+        }
+      },
+      "authenticity": {
+        "wildberries": {
+          "records": 27248,
+          "labeled_records": 0,
+          "counts": {
+            "authentic": 0,
+            "fake": 0
+          },
+          "label_coverage": 0.0
+        }
+      }
+    },
+    "language": {
+      "sentiment": {
+        "ru": {
+          "records": 27248,
+          "labeled_records": 27248,
+          "counts": {
+            "negative": 4565,
+            "neutral": 2280,
+            "positive": 20403
+          },
+          "label_coverage": 1.0
+        }
+      },
+      "authenticity": {
+        "ru": {
+          "records": 27248,
+          "labeled_records": 0,
+          "counts": {
+            "authentic": 0,
+            "fake": 0
+          },
+          "label_coverage": 0.0
+        }
+      }
+    },
+    "domain": {
+      "sentiment": {
+        "ecommerce": {
+          "records": 27248,
+          "labeled_records": 27248,
+          "counts": {
+            "negative": 4565,
+            "neutral": 2280,
+            "positive": 20403
+          },
+          "label_coverage": 1.0
+        }
+      },
+      "authenticity": {
+        "ecommerce": {
+          "records": 27248,
+          "labeled_records": 0,
+          "counts": {
+            "authentic": 0,
+            "fake": 0
+          },
+          "label_coverage": 0.0
+        }
+      }
+    }
+  },
+  "split_sizes": {
+    "train": 21798,
+    "valid": 2725,
+    "test": 2725
+  },
+  "split_overlap": {
+    "train_vs_valid": {
+      "exact_text_overlap": 0,
+      "record_id_overlap": 0,
+      "normalized_text_overlap": 0
+    },
+    "train_vs_test": {
+      "exact_text_overlap": 0,
+      "record_id_overlap": 0,
+      "normalized_text_overlap": 0
+    },
+    "valid_vs_test": {
+      "exact_text_overlap": 0,
+      "record_id_overlap": 0,
+      "normalized_text_overlap": 0
+    }
+  },
+  "tasks": {
+    "sentiment": {
+      "train_distribution": {
+        "labeled_records": 21798,
+        "counts": {
+          "negative": 3652,
+          "neutral": 1824,
+          "positive": 16322
+        },
+        "proportions": {
+          "negative": 0.16753830626662997,
+          "neutral": 0.08367740159647674,
+          "positive": 0.7487842921368933
+        },
+        "majority_label": "positive",
+        "minority_label": "neutral",
+        "minimum_class_support": 1824
+      },
+      "validation_distribution": {
+        "labeled_records": 2725,
+        "counts": {
+          "negative": 456,
+          "neutral": 228,
+          "positive": 2041
+        },
+        "proportions": {
+          "negative": 0.1673394495412844,
+          "neutral": 0.0836697247706422,
+          "positive": 0.7489908256880734
+        },
+        "majority_label": "positive",
+        "minority_label": "neutral",
+        "minimum_class_support": 228
+      },
+      "test_distribution": {
+        "labeled_records": 2725,
+        "counts": {
+          "negative": 457,
+          "neutral": 228,
+          "positive": 2040
+        },
+        "proportions": {
+          "negative": 0.16770642201834862,
+          "neutral": 0.0836697247706422,
+          "positive": 0.7486238532110092
+        },
+        "majority_label": "positive",
+        "minority_label": "neutral",
+        "minimum_class_support": 228
+      },
+      "warnings": [],
+      "majority_baseline": {
+        "validation": {
+          "accuracy": 0.7489908256880734,
+          "macro_f1": 0.2854944747517135,
+          "weighted_f1": 0.6414982271210062,
+          "precision_macro": 0.24966360856269113,
+          "recall_macro": 0.3333333333333333,
+          "support": 2725,
+          "per_label_support": {
+            "negative": 456,
+            "neutral": 228,
+            "positive": 2041
+          },
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              456
+            ],
+            [
+              0,
+              0,
+              228
+            ],
+            [
+              0,
+              0,
+              2041
+            ]
+          ],
+          "majority_label": "positive"
+        },
+        "test": {
+          "accuracy": 0.7486238532110092,
+          "macro_f1": 0.28541448058761804,
+          "weighted_f1": 0.6410042646591643,
+          "precision_macro": 0.24954128440366974,
+          "recall_macro": 0.3333333333333333,
+          "support": 2725,
+          "per_label_support": {
+            "negative": 457,
+            "neutral": 228,
+            "positive": 2040
+          },
+          "confusion_matrix": [
+            [
+              0,
+              0,
+              457
+            ],
+            [
+              0,
+              0,
+              228
+            ],
+            [
+              0,
+              0,
+              2040
+            ]
+          ],
+          "majority_label": "positive"
+        }
+      }
+    },
+    "authenticity": {
+      "train_distribution": {
+        "labeled_records": 0,
+        "counts": {
+          "authentic": 0,
+          "fake": 0
+        },
+        "proportions": {
+          "authentic": 0.0,
+          "fake": 0.0
+        },
+        "majority_label": null,
+        "minority_label": null,
+        "minimum_class_support": 0
+      },
+      "validation_distribution": {
+        "labeled_records": 0,
+        "counts": {
+          "authentic": 0,
+          "fake": 0
+        },
+        "proportions": {
+          "authentic": 0.0,
+          "fake": 0.0
+        },
+        "majority_label": null,
+        "minority_label": null,
+        "minimum_class_support": 0
+      },
+      "test_distribution": {
+        "labeled_records": 0,
+        "counts": {
+          "authentic": 0,
+          "fake": 0
+        },
+        "proportions": {
+          "authentic": 0.0,
+          "fake": 0.0
+        },
+        "majority_label": null,
+        "minority_label": null,
+        "minimum_class_support": 0
+      },
+      "warnings": [
+        "authenticity: test split has only 0 labeled examples; reported metrics should be treated as pilot-scale and high-variance."
+      ],
+      "majority_baseline": {
+        "validation": {},
+        "test": {}
+      }
+    }
+  },
+  "warnings": []
+}

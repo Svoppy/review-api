@@ -356,6 +356,54 @@ def load_perekrestok_ratings(path: str | Path) -> list[UnifiedReviewRecord]:
     return records
 
 
+def load_wildberries_reviews(path: str | Path) -> list[UnifiedReviewRecord]:
+    """Normalize the public, de-identified Wildberries review research dataset.
+
+    The upstream dataset exposes pseudonymous sequential IDs and redacts phone
+    numbers and email addresses.  This loader deliberately drops any author-like
+    fields and keeps only research-relevant product, category, rating, text, and
+    collection-date information.
+    """
+
+    records: list[UnifiedReviewRecord] = []
+    for row in _iter_tabular_rows(path):
+        body = _choose_field(row, "text", "review", "review_text", "content")
+        pros = _choose_field(row, "pros", "advantages")
+        cons = _choose_field(row, "cons", "disadvantages")
+        text_parts = [str(body).strip()] if body not in (None, "") else []
+        if pros not in (None, ""):
+            text_parts.append(f"Достоинства: {pros}")
+        if cons not in (None, ""):
+            text_parts.append(f"Недостатки: {cons}")
+        rating = _choose_field(row, "rating", "stars", "score")
+        category = _choose_field(row, "category_label", "category")
+
+        records.append(
+            _build_record(
+                text="\n\n".join(text_parts),
+                source="wildberries",
+                language="ru",
+                domain="ecommerce",
+                sentiment_label=map_rating_to_sentiment(rating),
+                record_id=_choose_field(row, "review_id", "id"),
+                title=category,
+                product_id=_choose_field(row, "product_id", "nm_id", "item_id"),
+                rating=rating,
+                metadata={
+                    "raw_dataset": "WB Review Dataset",
+                    "dataset_card": "https://huggingface.co/datasets/Hplss/wb-review-dataset",
+                    "license": "CC BY-NC-SA 4.0",
+                    "sentiment_label_origin": "rating_heuristic",
+                    "category": _choose_field(row, "category"),
+                    "category_label": _choose_field(row, "category_label"),
+                    "review_date": _choose_field(row, "date", "review_date"),
+                    "identifier_policy": "upstream pseudonymous sequential IDs only; no author field retained",
+                },
+            )
+        )
+    return records
+
+
 def load_opspam(path: str | Path) -> list[UnifiedReviewRecord]:
     dataset_path = Path(path)
     if dataset_path.is_dir():
@@ -574,6 +622,7 @@ def load_fraudyelp(path: str | Path) -> list[UnifiedReviewRecord]:
 DATASET_LOADERS = {
     "rureviews": load_rureviews,
     "perekrestok": load_perekrestok_ratings,
+    "wildberries": load_wildberries_reviews,
     "opspam": load_opspam,
     "maide_up": load_maide_up,
     "fraudyelp": load_fraudyelp,

@@ -1,6 +1,6 @@
 # Reproducibility Note
 
-Verification date: `2026-06-11`
+Verification date: `2026-06-12`
 
 ## 1. What Is Already Reproducible
 
@@ -21,13 +21,14 @@ PYTHONPATH=src .venv314/bin/python -m pytest -q
 
 Result:
 
-- `62 passed in 3.64s`
+- `63 passed`
 
 This means the current snapshot is reproducible at the level of local package logic, tests, and the main research utility layers.
 
 ## 3. What Still Limits Full Article-Level Reproducibility
 
 - the reported pilot artifacts were not originally generated under the same strengthened protocol now described as the minimum standard in `configs/model.pilot.yaml` and `docs/final_experiment_runbook_ru.md`;
+- the strengthened `pilot1k_v2` rerun is only partially complete at the moment: baseline and single-task sweeps are present, but multitask is not yet complete across all target seeds;
 - the local workspace still lacks prepared raw/export corpora for `OpSpam` and `FraudYelpDataset`, so the completed empirical authenticity scope remains narrower than the intended final benchmark;
 - some raw-data commands in the documentation depend on locally prepared files and should not be interpreted as guaranteed zero-setup commands for every snapshot;
 - the environment of record for already saved model artifacts and the current pinned environment still need additional alignment before a stronger submission-ready reproducibility claim.
@@ -40,7 +41,7 @@ At the current stage, the defensible claim is:
 
 ## 5. What Is Still Needed for a Stronger Submission Claim
 
-1. Regenerate the key baseline / single-task / multitask runs under the current protocol with `epochs=4`, `balanced`, `source-balanced`, and `early stopping`.
+1. Finish and aggregate the strengthened rerun under the current protocol with `epochs=4`, `balanced`, `source-balanced`, and `early stopping`.
 2. Fix one canonical environment of record for article results.
 3. Synchronize runbook commands with the local paths and prepared datasets that actually exist.
 4. Extend the local authenticity bundle with at least one non-`MAiDE-up` benchmark.

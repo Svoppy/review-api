@@ -60,10 +60,72 @@ PYTHONPATH=src python scripts/sample_unified_dataset.py \
   --source-cap maide_up=1000
 ```
 
-Это не заменяет полный корпус, но убирает главный defect старого tiny pilot:
+### Сборка article-grade mixed benchmark с большим test support
+
+Для следующего сильного цикла теперь есть отдельный builder, который формирует более крупный смешанный корпус и принудительно удерживает редкий `neutral` и баланс authenticity:
+
+```bash
+PYTHONPATH=src .venv314/bin/python scripts/build_article_benchmark.py \
+  --output data/processed/joint_reviews.article20k.jsonl \
+  --audit-output reports/audit/joint_reviews.article20k.audit.json
+```
+
+На текущем snapshot этот путь уже даёт:
+
+- `701` authenticity-labeled examples в test;
+- `122` примера класса `neutral` в sentiment test;
+- нулевой `normalized_text_overlap` между split'ами.
+
+### Расширение русскоязычного e-commerce материала Wildberries
+
+Для внешнего sentiment-источника проект поддерживает публичный исследовательский набор Wildberries. Он уже de-identified upstream и имеет лицензию `CC BY-NC-SA 4.0`; используйте его только для research/non-commercial сценария с указанием источника и лицензии.
+
+```bash
+PYTHONPATH=src python scripts/download_public_datasets.py --datasets wildberries --output-root data/raw
+PYTHONPATH=src python -m reviewguard.data normalize \
+  --dataset wildberries \
+  --input data/raw/wildberries/wildberries.jsonl \
+  --output data/processed/wildberries.jsonl \
+  --format jsonl
+```
+
+Для сравнения с текущим `article20k` можно собрать отдельный, не заменяющий его `article30k` candidate c 10 тысячами Wildberries отзывов:
+
+```bash
+PYTHONPATH=src python scripts/build_article_benchmark.py \
+  --output data/processed/joint_reviews.article30k.jsonl \
+  --audit-output reports/audit/joint_reviews.article30k.audit.json \
+  --source-target perekrestok=10000 \
+  --source-target rureviews=3000 \
+  --source-target maide_up=7000 \
+  --source-target wildberries=10000
+```
+
+Wildberries добавляет только rating-derived sentiment. Он не должен получать искусственные `authenticity` labels и не устраняет потребность в независимом fake-review benchmark.
+
+### Apple Silicon: Mac mini M2 Pro с 16 GB unified memory
+
+Для `article30k` используйте отдельный memory-safe профиль `configs/model.article30k.mac_m2_16gb.yaml`: physical batch равен `2`, gradient accumulation равен `4` (эффективный batch `8`), длина текста ограничена `192` токенами, а gradient checkpointing снижает пик памяти. До запуска убедитесь, что `torch.backends.mps.is_available()` возвращает `True`.
+
+### Сборка same-domain benchmark для контроля доменного сдвига
+
+```bash
+PYTHONPATH=src .venv314/bin/python scripts/build_article_benchmark.py \
+  --output data/processed/joint_reviews.maide7k.jsonl \
+  --audit-output reports/audit/joint_reviews.maide7k.audit.json \
+  --source-target maide_up=7000 \
+  --source-require maide_up:authenticity_label:authentic=3500 \
+  --source-require maide_up:authenticity_label:fake=3500
+```
+
+Этот корпус нужен не как финальный benchmark, а как контрольный same-domain scenario: обе задачи живут в одном источнике и меньше путают эффект multitask с эффектом domain shift.
+
+### Почему это уже лучше старого tiny pilot
+
+Это ещё не заменяет полный multi-benchmark package, но убирает главный defect старого tiny pilot:
 
 - в тесте будет больше minority-support;
-- `neutral` перестанет определяться пятью примерами;
+- `neutral` больше не определяется пятью примерами;
 - агрегированные метрики будут меньше зависеть от случайной выборки;
 - mixed-domain корпус станет контролируемым по source composition.
 
@@ -97,26 +159,42 @@ PYTHONPATH=src python -m reviewguard.data merge --inputs data/processed/rureview
 
 ## 2. Pilot protocol
 
+### Рекомендуемый единый запуск release-пакета
+
+Финальные числа следует получать одним оркестратором, а не последовательностью вручную скопированных команд. Он сохраняет неизменяемую копию YAML-конфига, запускает preflight, `5` seed'ов для всех baseline-моделей, статистический слой и ablation, после чего оставляет `release_manifest.json` со всеми фактическими командами.
+
+Запускать только в среде с CUDA или Apple Metal:
+
+```bash
+PYTHONPATH=src python scripts/run_article_release.py
+```
+
+На CPU скрипт останавливается до записи model artifacts. Проверить будущий план без GPU и без записи файлов можно так:
+
+```bash
+PYTHONPATH=src python scripts/run_article_release.py --dry-run
+```
+
 ### Multi-seed sweep на фиксированном split
 
-Для честной `multiple-seed` оценки держим `split seed` фиксированным и варьируем только `train seed`.
+Для честной `multiple-seed` оценки держим `split seed` фиксированным и варьируем только `train seed`. Новый нормальный минимум теперь `5` seeds, а не `3`.
 
 ```bash
 .venv314/bin/python scripts/run_multiseed_experiments.py \
-  --input data/processed/joint_reviews.pilot1k.jsonl \
-  --config configs/model.pilot.yaml \
+  --input data/processed/joint_reviews.article20k.jsonl \
+  --config configs/model.article.yaml \
   --split-seed 42 \
-  --train-seeds 11 21 42 \
-  --output-root models/multiseed/pilot1k \
-  --report-dir reports/multiseed/pilot1k
+  --train-seeds 11 21 42 84 126 \
+  --output-root models/multiseed/article20k \
+  --report-dir reports/multiseed/article20k
 ```
 
 После завершения должны появиться:
 
-- `models/multiseed/pilot1k/<model>/seed-<n>/train_report.json`
-- `reports/multiseed/pilot1k/summary.json`
-- `reports/multiseed/pilot1k/metrics_table.csv`
-- `reports/multiseed/pilot1k/summary.md`
+- `models/multiseed/article20k/<model>/seed-<n>/train_report.json`
+- `reports/multiseed/article20k/summary.json`
+- `reports/multiseed/article20k/metrics_table.csv`
+- `reports/multiseed/article20k/summary.md`
 
 Начиная со следующего цикла, `1 epoch` больше не используется даже для pilot comparison. Базовый протокол репозитория теперь предполагает:
 
@@ -132,20 +210,22 @@ PYTHONPATH=src python -m reviewguard.data merge --inputs data/processed/rureview
 
 ```bash
 .venv314/bin/python scripts/analyze_multiseed_statistics.py \
-  --input data/processed/joint_reviews.pilot1k.jsonl \
-  --multiseed-root models/multiseed/pilot1k \
-  --summary-json reports/multiseed/pilot1k/summary.json \
-  --output-dir reports/multiseed/pilot1k_statistics \
+  --input data/processed/joint_reviews.article20k.jsonl \
+  --multiseed-root models/multiseed/article20k \
+  --summary-json reports/multiseed/article20k/summary.json \
+  --output-dir reports/multiseed/article20k_statistics \
   --split-seed 42 \
-  --train-seeds 11 21 42
+  --train-seeds 11 21 42 84 126
 ```
 
 Ожидаемые артефакты:
 
-- `reports/multiseed/pilot1k_statistics/statistics_summary.json`
-- `reports/multiseed/pilot1k_statistics/model_intervals.csv`
-- `reports/multiseed/pilot1k_statistics/pairwise_comparisons.csv`
-- `reports/multiseed/pilot1k_statistics/statistics_report.md`
+- `reports/multiseed/article20k_statistics/statistics_summary.json`
+- `reports/multiseed/article20k_statistics/model_intervals.csv`
+- `reports/multiseed/article20k_statistics/pairwise_comparisons.csv`
+- `reports/multiseed/article20k_statistics/statistics_report.md`
+
+Теперь statistical layer дополнительно пишет `Cohen's dz` и automatic small-sample cautions, чтобы `p-value` не выглядела как ложная строгая истина на маленьком test split.
 
 ### Ablation layer: single-task vs multitask
 
@@ -153,16 +233,64 @@ PYTHONPATH=src python -m reviewguard.data merge --inputs data/processed/rureview
 
 ```bash
 .venv314/bin/python scripts/build_task_ablation_report.py \
-  --multiseed-summary reports/multiseed/pilot1k/summary.json \
-  --statistics-summary reports/multiseed/pilot1k_statistics/statistics_summary.json \
-  --output-dir reports/multiseed/pilot1k_ablation
+  --multiseed-summary reports/multiseed/article20k/summary.json \
+  --statistics-summary reports/multiseed/article20k_statistics/statistics_summary.json \
+  --output-dir reports/multiseed/article20k_ablation
 ```
 
 Ожидаемые артефакты:
 
-- `reports/multiseed/pilot1k_ablation/task_ablation.json`
-- `reports/multiseed/pilot1k_ablation/task_ablation.csv`
-- `reports/multiseed/pilot1k_ablation/task_ablation.md`
+- `reports/multiseed/article20k_ablation/task_ablation.json`
+- `reports/multiseed/article20k_ablation/task_ablation.csv`
+- `reports/multiseed/article20k_ablation/task_ablation.md`
+
+### Matrix-runs для `lambda`, backbone и learning curves
+
+Для sweep-пакетов больше не нужно вручную плодить команды. Теперь это делается через один matrix-runner:
+
+```bash
+PYTHONPATH=src .venv314/bin/python scripts/run_experiment_matrix.py \
+  --input data/processed/joint_reviews.article20k.jsonl \
+  --base-config configs/model.article.yaml \
+  --output-root models/matrix \
+  --report-root reports/matrix \
+  --variant label=lambda_03_07,loss_weights.sentiment=0.3,loss_weights.authenticity=0.7 \
+  --variant label=lambda_05_05,loss_weights.sentiment=0.5,loss_weights.authenticity=0.5 \
+  --variant label=lambda_07_03,loss_weights.sentiment=0.7,loss_weights.authenticity=0.3
+```
+
+Для backbone ablation:
+
+```bash
+PYTHONPATH=src .venv314/bin/python scripts/run_experiment_matrix.py \
+  --input data/processed/joint_reviews.article20k.jsonl \
+  --base-config configs/model.article.yaml \
+  --output-root models/matrix_backbones \
+  --report-root reports/matrix_backbones \
+  --variant label=xlmr,model_name=FacebookAI/xlm-roberta-base \
+  --variant label=distilbert,model_name=distilbert-base-multilingual-cased
+```
+
+Для learning curves сначала готовим corpora:
+
+```bash
+PYTHONPATH=src .venv314/bin/python scripts/build_learning_curve_corpora.py \
+  --input data/processed/joint_reviews.article20k.jsonl \
+  --output-root data/processed/learning_curves
+```
+
+После этого соответствующие `.jsonl` можно подавать как `input=` в `run_experiment_matrix.py`.
+
+### Error analysis и gradient conflict
+
+Для статьи теперь есть отдельные diagnostic scripts:
+
+```bash
+PYTHONPATH=src .venv314/bin/python scripts/build_error_analysis_report.py --help
+PYTHONPATH=src .venv314/bin/python scripts/probe_gradient_conflict.py --help
+```
+
+Первый script даёт slice-level error-rate comparison и конкретные примеры расхождений `multitask vs single-task`. Второй даёт прямой probe по cosine similarity градиентов sentiment/authenticity на shared encoder.
 
 ### Robustness layer: source / domain / language slices
 

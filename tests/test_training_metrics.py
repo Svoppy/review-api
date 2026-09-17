@@ -266,6 +266,31 @@ def test_analysis_protocol_uses_article_grade_defaults_and_config_overrides() ->
     }
 
 
+def test_multitask_config_uses_explicit_architecture_options() -> None:
+    module = importlib.import_module("reviewguard.training.__main__")
+    config = module._read_model_config("configs/model.article.yaml")
+
+    assert config["pooling"] == "cls"
+    assert config["head_type"] == "mlp"
+
+
+def test_mac_m2_profile_uses_memory_safe_effective_batch() -> None:
+    module = importlib.import_module("reviewguard.training.__main__")
+    config = module._read_model_config("configs/model.article30k.mac_m2_16gb.yaml")
+    single_task_config = module._resolve_single_task_config(
+        config,
+        "sentiment",
+        train_random_state=42,
+    )
+
+    assert config["max_length"] == 192
+    assert config["train"]["batch_size"] == 2
+    assert config["train"]["gradient_accumulation_steps"] == 4
+    assert config["train"]["gradient_checkpointing"] is True
+    assert single_task_config.gradient_accumulation_steps == 4
+    assert single_task_config.gradient_checkpointing is True
+
+
 def test_split_unified_records_preserves_all_examples() -> None:
     records = [
         {

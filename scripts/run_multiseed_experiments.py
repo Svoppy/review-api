@@ -18,7 +18,7 @@ DEFAULT_MODELS = (
     "single-task-authenticity",
     "multitask",
 )
-DEFAULT_TRAIN_SEEDS = (11, 21, 42)
+DEFAULT_TRAIN_SEEDS = (11, 21, 42, 84, 126)
 NUMERIC_METRICS = (
     "accuracy",
     "macro_f1",

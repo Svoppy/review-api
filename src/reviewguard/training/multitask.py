@@ -1,27 +1,35 @@
 from __future__ import annotations
 
 import copy
+import math
+import random
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import torch
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, get_scheduler
 
 from reviewguard.config import settings
 from reviewguard.ml.datasets import AUTHENTICITY_LABELS, SENTIMENT_LABELS
 from reviewguard.ml.modeling import MultiTaskTransformer
 from reviewguard.training.export import ensure_export_dir, write_json
 from reviewguard.training.metrics import compute_multitask_metrics
+from reviewguard.training.runtime import resolve_training_device
 
 
 def seed_training_runtime(random_state: int) -> None:
+    random.seed(random_state)
+    np.random.seed(random_state)
     torch.manual_seed(random_state)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(random_state)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
 
 @dataclass(frozen=True)
@@ -32,13 +40,20 @@ class MultitaskTrainingConfig:
     learning_rate: float = 2e-5
     weight_decay: float = 0.01
     epochs: int = 4
+    warmup_ratio: float = 0.1
+    scheduler_type: str = "linear"
+    max_grad_norm: float | None = 1.0
+    gradient_accumulation_steps: int = 1
+    gradient_checkpointing: bool = False
     dropout: float = 0.1
+    pooling: str = "mean"
+    head_type: str = "linear"
     sentiment_loss_weight: float = 1.0
     authenticity_loss_weight: float = 1.0
     class_weight_mode: str = "balanced"
     train_sampler: str = "source_balanced"
     early_stopping_patience: int | None = 2
-    device: str = "cpu"
+    device: str = "auto"
     random_state: int = 42
 
 
@@ -97,6 +112,8 @@ class MultitaskTrainingScaffold:
 
     def __init__(self, config: MultitaskTrainingConfig | None = None) -> None:
         self.config = config or MultitaskTrainingConfig()
+        if self.config.gradient_accumulation_steps < 1:
+            raise ValueError("gradient_accumulation_steps must be at least 1.")
         seed_training_runtime(self.config.random_state)
         self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name)
         self.model = MultiTaskTransformer(
@@ -106,8 +123,13 @@ class MultitaskTrainingScaffold:
             dropout=self.config.dropout,
             sentiment_loss_weight=self.config.sentiment_loss_weight,
             authenticity_loss_weight=self.config.authenticity_loss_weight,
+            pooling=self.config.pooling,
+            head_type=self.config.head_type,
         )
-        self.device = torch.device(self.config.device)
+        if self.config.gradient_checkpointing:
+            self.model.encoder.gradient_checkpointing_enable()
+        self.runtime_device = resolve_training_device(self.config.device)
+        self.device = torch.device(self.runtime_device.resolved)
         self.model.to(self.device)
 
     def _make_loader(self, records: list[dict[str, Any]], shuffle: bool) -> DataLoader:
@@ -224,6 +246,18 @@ class MultitaskTrainingScaffold:
         )
         class_weights = self._task_class_weights(train_records)
         train_loader = self._make_loader(train_records, shuffle=True)
+        optimizer_steps_per_epoch = max(
+            math.ceil(len(train_loader) / self.config.gradient_accumulation_steps),
+            1,
+        )
+        total_training_steps = optimizer_steps_per_epoch * self.config.epochs
+        warmup_steps = int(total_training_steps * self.config.warmup_ratio)
+        scheduler = get_scheduler(
+            self.config.scheduler_type,
+            optimizer=optimizer,
+            num_warmup_steps=warmup_steps,
+            num_training_steps=total_training_steps,
+        )
         history: list[dict[str, Any]] = []
         best_validation_score: float | None = None
         best_state_dict: dict[str, Any] | None = None
@@ -234,13 +268,32 @@ class MultitaskTrainingScaffold:
             epoch_loss = 0.0
             batch_count = 0
             labeled_counts = {"sentiment": 0, "authenticity": 0}
+            optimizer_steps = 0
+            total_batches = len(train_loader)
+            optimizer.zero_grad(set_to_none=True)
 
-            for batch in train_loader:
+            for batch_index, batch in enumerate(train_loader):
                 batch = {name: tensor.to(self.device) for name, tensor in batch.items()}
-                optimizer.zero_grad()
                 loss, counts = self._compute_batch_loss(batch, class_weights=class_weights)
-                loss.backward()
-                optimizer.step()
+                accumulation_window = min(
+                    self.config.gradient_accumulation_steps,
+                    total_batches - batch_index,
+                )
+                (loss / accumulation_window).backward()
+                should_step = (
+                    (batch_index + 1) % self.config.gradient_accumulation_steps == 0
+                    or batch_index + 1 == total_batches
+                )
+                if should_step:
+                    if self.config.max_grad_norm is not None:
+                        torch.nn.utils.clip_grad_norm_(
+                            self.model.parameters(),
+                            self.config.max_grad_norm,
+                        )
+                    optimizer.step()
+                    scheduler.step()
+                    optimizer.zero_grad(set_to_none=True)
+                    optimizer_steps += 1
 
                 epoch_loss += float(loss.item())
                 batch_count += 1
@@ -251,6 +304,8 @@ class MultitaskTrainingScaffold:
                 "epoch": epoch,
                 "train_loss": epoch_loss / max(batch_count, 1),
                 "labeled_examples": labeled_counts,
+                "optimizer_steps": optimizer_steps,
+                "learning_rate_end": float(optimizer.param_groups[0]["lr"]),
             }
             if valid_records:
                 validation_metrics = self.evaluate(valid_records)
@@ -353,13 +408,21 @@ class MultitaskTrainingScaffold:
                 "learning_rate": self.config.learning_rate,
                 "weight_decay": self.config.weight_decay,
                 "epochs": self.config.epochs,
+                "warmup_ratio": self.config.warmup_ratio,
+                "scheduler_type": self.config.scheduler_type,
+                "max_grad_norm": self.config.max_grad_norm,
+                "gradient_accumulation_steps": self.config.gradient_accumulation_steps,
+                "gradient_checkpointing": self.config.gradient_checkpointing,
                 "dropout": self.config.dropout,
+                "pooling": self.config.pooling,
+                "head_type": self.config.head_type,
                 "sentiment_loss_weight": self.config.sentiment_loss_weight,
                 "authenticity_loss_weight": self.config.authenticity_loss_weight,
                 "class_weight_mode": self.config.class_weight_mode,
                 "train_sampler": self.config.train_sampler,
                 "early_stopping_patience": self.config.early_stopping_patience,
-                "device": self.config.device,
+                "device_requested": self.runtime_device.requested,
+                "device_effective": self.runtime_device.resolved,
                 "random_state": self.config.random_state,
             },
             "history": getattr(self, "history", []),

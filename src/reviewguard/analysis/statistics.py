@@ -130,6 +130,40 @@ def paired_seed_delta(
     return deltas, float(mean(deltas))
 
 
+def paired_effect_size(delta_per_seed: list[float]) -> dict[str, float | int | None]:
+    if not delta_per_seed:
+        raise ValueError("delta_per_seed must not be empty.")
+
+    sample_mean = mean(delta_per_seed)
+    if len(delta_per_seed) == 1:
+        return {
+            "n": 1,
+            "mean_delta": sample_mean,
+            "std_delta": 0.0,
+            "cohens_dz": None,
+            "hedges_g": None,
+        }
+
+    sample_std = stdev(delta_per_seed)
+    if math.isclose(sample_std, 0.0):
+        effect = None
+    else:
+        effect = sample_mean / sample_std
+
+    hedges_g = None
+    if effect is not None:
+        correction = 1.0 - (3.0 / max((4 * len(delta_per_seed)) - 5, 1))
+        hedges_g = effect * correction
+
+    return {
+        "n": len(delta_per_seed),
+        "mean_delta": sample_mean,
+        "std_delta": sample_std,
+        "cohens_dz": effect,
+        "hedges_g": hedges_g,
+    }
+
+
 def paired_bootstrap_confidence_interval(
     y_true: np.ndarray,
     model_a_predictions: list[np.ndarray],

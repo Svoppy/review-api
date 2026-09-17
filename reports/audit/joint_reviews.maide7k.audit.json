@@ -1,0 +1,517 @@
+{
+  "input_path": "data/processed/joint_reviews.maide7k.jsonl",
+  "input_sha256": "1ea8c1b7fcb40b3edd5ee4582b6ed9997385c14445d8502649cad289951b6f6d",
+  "random_state": 42,
+  "records": 7000,
+  "duplicate_summary": {
+    "exact_duplicate_rows": 4,
+    "normalized_duplicate_rows": 4,
+    "unique_exact_texts": 6996,
+    "unique_normalized_texts": 6996
+  },
+  "source_distribution": {
+    "maide_up": 7000
+  },
+  "domain_distribution": {
+    "hospitality": 7000
+  },
+  "language_distribution": {
+    "ro": 710,
+    "en": 680,
+    "ru": 692,
+    "ko": 719,
+    "tr": 673,
+    "es": 712,
+    "it": 710,
+    "zh": 717,
+    "de": 719,
+    "fr": 668
+  },
+  "label_coverage": {
+    "source": {
+      "sentiment": {
+        "maide_up": {
+          "records": 7000,
+          "labeled_records": 7000,
+          "counts": {
+            "negative": 3526,
+            "neutral": 0,
+            "positive": 3474
+          },
+          "label_coverage": 1.0
+        }
+      },
+      "authenticity": {
+        "maide_up": {
+          "records": 7000,
+          "labeled_records": 7000,
+          "counts": {
+            "authentic": 3500,
+            "fake": 3500
+          },
+          "label_coverage": 1.0
+        }
+      }
+    },
+    "language": {
+      "sentiment": {
+        "de": {
+          "records": 719,
+          "labeled_records": 719,
+          "counts": {
+            "negative": 355,
+            "neutral": 0,
+            "positive": 364
+          },
+          "label_coverage": 1.0
+        },
+        "en": {
+          "records": 680,
+          "labeled_records": 680,
+          "counts": {
+            "negative": 332,
+            "neutral": 0,
+            "positive": 348
+          },
+          "label_coverage": 1.0
+        },
+        "es": {
+          "records": 712,
+          "labeled_records": 712,
+          "counts": {
+            "negative": 375,
+            "neutral": 0,
+            "positive": 337
+          },
+          "label_coverage": 1.0
+        },
+        "fr": {
+          "records": 668,
+          "labeled_records": 668,
+          "counts": {
+            "negative": 334,
+            "neutral": 0,
+            "positive": 334
+          },
+          "label_coverage": 1.0
+        },
+        "it": {
+          "records": 710,
+          "labeled_records": 710,
+          "counts": {
+            "negative": 366,
+            "neutral": 0,
+            "positive": 344
+          },
+          "label_coverage": 1.0
+        },
+        "ko": {
+          "records": 719,
+          "labeled_records": 719,
+          "counts": {
+            "negative": 368,
+            "neutral": 0,
+            "positive": 351
+          },
+          "label_coverage": 1.0
+        },
+        "ro": {
+          "records": 710,
+          "labeled_records": 710,
+          "counts": {
+            "negative": 368,
+            "neutral": 0,
+            "positive": 342
+          },
+          "label_coverage": 1.0
+        },
+        "ru": {
+          "records": 692,
+          "labeled_records": 692,
+          "counts": {
+            "negative": 351,
+            "neutral": 0,
+            "positive": 341
+          },
+          "label_coverage": 1.0
+        },
+        "tr": {
+          "records": 673,
+          "labeled_records": 673,
+          "counts": {
+            "negative": 328,
+            "neutral": 0,
+            "positive": 345
+          },
+          "label_coverage": 1.0
+        },
+        "zh": {
+          "records": 717,
+          "labeled_records": 717,
+          "counts": {
+            "negative": 349,
+            "neutral": 0,
+            "positive": 368
+          },
+          "label_coverage": 1.0
+        }
+      },
+      "authenticity": {
+        "de": {
+          "records": 719,
+          "labeled_records": 719,
+          "counts": {
+            "authentic": 353,
+            "fake": 366
+          },
+          "label_coverage": 1.0
+        },
+        "en": {
+          "records": 680,
+          "labeled_records": 680,
+          "counts": {
+            "authentic": 357,
+            "fake": 323
+          },
+          "label_coverage": 1.0
+        },
+        "es": {
+          "records": 712,
+          "labeled_records": 712,
+          "counts": {
+            "authentic": 366,
+            "fake": 346
+          },
+          "label_coverage": 1.0
+        },
+        "fr": {
+          "records": 668,
+          "labeled_records": 668,
+          "counts": {
+            "authentic": 328,
+            "fake": 340
+          },
+          "label_coverage": 1.0
+        },
+        "it": {
+          "records": 710,
+          "labeled_records": 710,
+          "counts": {
+            "authentic": 352,
+            "fake": 358
+          },
+          "label_coverage": 1.0
+        },
+        "ko": {
+          "records": 719,
+          "labeled_records": 719,
+          "counts": {
+            "authentic": 359,
+            "fake": 360
+          },
+          "label_coverage": 1.0
+        },
+        "ro": {
+          "records": 710,
+          "labeled_records": 710,
+          "counts": {
+            "authentic": 344,
+            "fake": 366
+          },
+          "label_coverage": 1.0
+        },
+        "ru": {
+          "records": 692,
+          "labeled_records": 692,
+          "counts": {
+            "authentic": 341,
+            "fake": 351
+          },
+          "label_coverage": 1.0
+        },
+        "tr": {
+          "records": 673,
+          "labeled_records": 673,
+          "counts": {
+            "authentic": 319,
+            "fake": 354
+          },
+          "label_coverage": 1.0
+        },
+        "zh": {
+          "records": 717,
+          "labeled_records": 717,
+          "counts": {
+            "authentic": 381,
+            "fake": 336
+          },
+          "label_coverage": 1.0
+        }
+      }
+    },
+    "domain": {
+      "sentiment": {
+        "hospitality": {
+          "records": 7000,
+          "labeled_records": 7000,
+          "counts": {
+            "negative": 3526,
+            "neutral": 0,
+            "positive": 3474
+          },
+          "label_coverage": 1.0
+        }
+      },
+      "authenticity": {
+        "hospitality": {
+          "records": 7000,
+          "labeled_records": 7000,
+          "counts": {
+            "authentic": 3500,
+            "fake": 3500
+          },
+          "label_coverage": 1.0
+        }
+      }
+    }
+  },
+  "split_sizes": {
+    "train": 5600,
+    "valid": 700,
+    "test": 700
+  },
+  "split_overlap": {
+    "train_vs_valid": {
+      "exact_text_overlap": 0,
+      "record_id_overlap": 0,
+      "normalized_text_overlap": 0
+    },
+    "train_vs_test": {
+      "exact_text_overlap": 0,
+      "record_id_overlap": 0,
+      "normalized_text_overlap": 0
+    },
+    "valid_vs_test": {
+      "exact_text_overlap": 0,
+      "record_id_overlap": 0,
+      "normalized_text_overlap": 0
+    }
+  },
+  "tasks": {
+    "sentiment": {
+      "train_distribution": {
+        "labeled_records": 5600,
+        "counts": {
+          "negative": 2821,
+          "neutral": 0,
+          "positive": 2779
+        },
+        "proportions": {
+          "negative": 0.50375,
+          "neutral": 0.0,
+          "positive": 0.49625
+        },
+        "majority_label": "negative",
+        "minority_label": "neutral",
+        "minimum_class_support": 0
+      },
+      "validation_distribution": {
+        "labeled_records": 700,
+        "counts": {
+          "negative": 352,
+          "neutral": 0,
+          "positive": 348
+        },
+        "proportions": {
+          "negative": 0.5028571428571429,
+          "neutral": 0.0,
+          "positive": 0.49714285714285716
+        },
+        "majority_label": "negative",
+        "minority_label": "neutral",
+        "minimum_class_support": 0
+      },
+      "test_distribution": {
+        "labeled_records": 700,
+        "counts": {
+          "negative": 353,
+          "neutral": 0,
+          "positive": 347
+        },
+        "proportions": {
+          "negative": 0.5042857142857143,
+          "neutral": 0.0,
+          "positive": 0.4957142857142857
+        },
+        "majority_label": "negative",
+        "minority_label": "neutral",
+        "minimum_class_support": 0
+      },
+      "warnings": [
+        "sentiment: minority class 'neutral' has only 0 test examples; macro-F1 is likely unstable.",
+        "sentiment: training split has sparse class coverage (minimum class support 0); class balancing or more data is recommended."
+      ],
+      "majority_baseline": {
+        "validation": {
+          "accuracy": 0.5028571428571429,
+          "macro_f1": 0.22306717363751583,
+          "weighted_f1": 0.33651276480173814,
+          "precision_macro": 0.16761904761904764,
+          "recall_macro": 0.3333333333333333,
+          "support": 700,
+          "per_label_support": {
+            "negative": 352,
+            "neutral": 0,
+            "positive": 348
+          },
+          "confusion_matrix": [
+            [
+              352,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              348,
+              0,
+              0
+            ]
+          ],
+          "majority_label": "negative"
+        },
+        "test": {
+          "accuracy": 0.5042857142857143,
+          "macro_f1": 0.22348844571066795,
+          "weighted_f1": 0.33810609143942477,
+          "precision_macro": 0.1680952380952381,
+          "recall_macro": 0.3333333333333333,
+          "support": 700,
+          "per_label_support": {
+            "negative": 353,
+            "neutral": 0,
+            "positive": 347
+          },
+          "confusion_matrix": [
+            [
+              353,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              347,
+              0,
+              0
+            ]
+          ],
+          "majority_label": "negative"
+        }
+      }
+    },
+    "authenticity": {
+      "train_distribution": {
+        "labeled_records": 5600,
+        "counts": {
+          "authentic": 2800,
+          "fake": 2800
+        },
+        "proportions": {
+          "authentic": 0.5,
+          "fake": 0.5
+        },
+        "majority_label": "authentic",
+        "minority_label": "authentic",
+        "minimum_class_support": 2800
+      },
+      "validation_distribution": {
+        "labeled_records": 700,
+        "counts": {
+          "authentic": 350,
+          "fake": 350
+        },
+        "proportions": {
+          "authentic": 0.5,
+          "fake": 0.5
+        },
+        "majority_label": "authentic",
+        "minority_label": "authentic",
+        "minimum_class_support": 350
+      },
+      "test_distribution": {
+        "labeled_records": 700,
+        "counts": {
+          "authentic": 350,
+          "fake": 350
+        },
+        "proportions": {
+          "authentic": 0.5,
+          "fake": 0.5
+        },
+        "majority_label": "authentic",
+        "minority_label": "authentic",
+        "minimum_class_support": 350
+      },
+      "warnings": [],
+      "majority_baseline": {
+        "validation": {
+          "accuracy": 0.5,
+          "macro_f1": 0.3333333333333333,
+          "weighted_f1": 0.3333333333333333,
+          "precision_macro": 0.25,
+          "recall_macro": 0.5,
+          "support": 700,
+          "per_label_support": {
+            "authentic": 350,
+            "fake": 350
+          },
+          "confusion_matrix": [
+            [
+              350,
+              0
+            ],
+            [
+              350,
+              0
+            ]
+          ],
+          "majority_label": "authentic"
+        },
+        "test": {
+          "accuracy": 0.5,
+          "macro_f1": 0.3333333333333333,
+          "weighted_f1": 0.3333333333333333,
+          "precision_macro": 0.25,
+          "recall_macro": 0.5,
+          "support": 700,
+          "per_label_support": {
+            "authentic": 350,
+            "fake": 350
+          },
+          "confusion_matrix": [
+            [
+              350,
+              0
+            ],
+            [
+              350,
+              0
+            ]
+          ],
+          "majority_label": "authentic"
+        }
+      }
+    }
+  },
+  "warnings": [
+    "Detected 4 normalized duplicate rows in the merged corpus; group-aware splitting is recommended.",
+    "Corpus mixes multiple languages; language-aware evaluation is required for strong claims."
+  ]
+}

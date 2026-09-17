@@ -37,6 +37,14 @@ The repository contains the full training, analysis, export, and API stack. Howe
 - the current reported evidence is a completed low-resource study package;
 - broader benchmark claims still require larger and more source-controlled experiments.
 
+New repository-ready stronger benchmark artifacts are now also available locally:
+
+- `data/processed/joint_reviews.article20k.jsonl`: mixed-domain benchmark corpus with `20,000` rows
+- `reports/audit/joint_reviews.article20k.audit.json`: audit for the larger mixed benchmark
+- `data/processed/joint_reviews.maide7k.jsonl`: same-domain `MAiDE-up` benchmark for transfer-control experiments
+- `reports/audit/joint_reviews.maide7k.audit.json`: audit for the same-domain benchmark
+- `data/processed/learning_curves/*.jsonl`: deterministic corpora for `500 / 1000 / 2000 / 5000` learning-curve runs
+
 Until you train and export a multitask checkpoint into `models/latest`, `/analyze` will return a transparent error message instead of pretending to predict.
 
 ## Recommended first stack
@@ -69,9 +77,18 @@ When describing completed experiments, only the datasets that are actually prepa
 What the repository already supports:
 
 - a reproducible low-resource comparison over `baseline`, `single-task`, and `multitask` models;
-- repeated study runs across three train seeds;
+- repeated study runs across three train seeds in the completed legacy pilot, with a five-seed stronger protocol now scripted for the next benchmark stage;
 - significance-oriented reporting and task-ablation artifacts;
 - an API and browser UI that can consume an exported multitask checkpoint.
+
+What the repository now additionally supports for the next empirical stage:
+
+- larger benchmark construction with explicit rare-class quotas via `scripts/build_article_benchmark.py`;
+- same-domain vs mixed-domain corpus construction for domain-shift control;
+- deterministic learning-curve corpora via `scripts/build_learning_curve_corpora.py`;
+- experiment-matrix orchestration for `lambda` sweeps, backbone ablations, and data-scale runs via `scripts/run_experiment_matrix.py`;
+- richer statistical outputs with effect sizes and automatic small-sample cautions;
+- targeted error analysis and gradient-conflict probing scripts.
 
 What remains explicitly human-in-the-loop:
 
@@ -341,6 +358,8 @@ PYTHONPATH=src python scripts/generate_defense_demo.py
 - [Pilot results](docs/pilot_results.md)
 - [Article results package](docs/article_results_package_ru.md)
 - [Article results package (EN)](docs/article_results_package_en.md)
+- [Strengthened rerun status (EN)](docs/pilot1k_v2_status_en.md)
+- [Strengthened rerun status (RU)](docs/pilot1k_v2_status_ru.md)
 - [Pilot analysis (EN)](docs/pilot_analysis_en.md)
 - [Dissertation audit (RU)](docs/dissertation_audit_ru.md)
 - [Reviewer response (RU)](docs/reviewer_response_ru.md)

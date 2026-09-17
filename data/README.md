@@ -9,6 +9,9 @@ The current workspace contains local raw copies only for:
 - `RuReviews`
 - `Perekrestok Reviews`
 - `MAiDE-up`
+- `Wildberries Review Dataset` (downloaded as research/non-commercial material; provenance is stored alongside raw export)
+
+The collection pipeline also supports a public, de-identified Wildberries research dataset. It is not included in git; retrieve it explicitly through `scripts/download_public_datasets.py --datasets wildberries`. Its CC BY-NC-SA 4.0 licence permits research/non-commercial use with attribution and share-alike requirements.
 
 There is no local `data/raw/opspam/` directory in this snapshot, and no local `FraudYelpDataset` review-text export has been prepared yet.
 
@@ -36,6 +39,7 @@ data/raw/perekrestok/
 data/raw/fraudyelp/
 data/raw/opspam/
 data/raw/maide_up/
+data/raw/wildberries/
 ```
 
 Only the first three of those directories are currently present in this workspace.

@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import platform
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -11,8 +12,9 @@ from reviewguard.analysis.robustness import build_multitask_robustness_report
 from reviewguard.data import load_unified_records
 from reviewguard.data.audit import build_dataset_audit_report
 from reviewguard.training.baseline import BaselineConfig, ClassicalBaselineTrainer
-from reviewguard.training.export import ensure_export_dir, write_json
+from reviewguard.training.export import write_json
 from reviewguard.training.metrics import label_field_for_task
+from reviewguard.training.runtime import require_accelerator, resolve_training_device
 from reviewguard.training.splits import split_unified_records
 from reviewguard.ml.datasets import AUTHENTICITY_LABELS, SENTIMENT_LABELS
 
@@ -288,6 +290,36 @@ def _resolve_single_task_config(raw_config: dict, task: str, *, train_random_sta
             shared_train_cfg.get("epochs"),
             default=SingleTaskTrainingConfig.epochs,
         ),
+        warmup_ratio=_pick_config_value(
+            task_cfg.get("warmup_ratio"),
+            single_task_train_cfg.get("warmup_ratio"),
+            shared_train_cfg.get("warmup_ratio"),
+            default=SingleTaskTrainingConfig.warmup_ratio,
+        ),
+        scheduler_type=_pick_config_value(
+            task_cfg.get("scheduler_type"),
+            single_task_train_cfg.get("scheduler_type"),
+            shared_train_cfg.get("scheduler_type"),
+            default=SingleTaskTrainingConfig.scheduler_type,
+        ),
+        max_grad_norm=_pick_config_value(
+            task_cfg.get("max_grad_norm"),
+            single_task_train_cfg.get("max_grad_norm"),
+            shared_train_cfg.get("max_grad_norm"),
+            default=SingleTaskTrainingConfig.max_grad_norm,
+        ),
+        gradient_accumulation_steps=_pick_config_value(
+            task_cfg.get("gradient_accumulation_steps"),
+            single_task_train_cfg.get("gradient_accumulation_steps"),
+            shared_train_cfg.get("gradient_accumulation_steps"),
+            default=SingleTaskTrainingConfig.gradient_accumulation_steps,
+        ),
+        gradient_checkpointing=_pick_config_value(
+            task_cfg.get("gradient_checkpointing"),
+            single_task_train_cfg.get("gradient_checkpointing"),
+            shared_train_cfg.get("gradient_checkpointing"),
+            default=SingleTaskTrainingConfig.gradient_checkpointing,
+        ),
         dropout=_pick_config_value(
             task_cfg.get("dropout"),
             single_task_cfg.get("dropout"),
@@ -334,6 +366,27 @@ def _analysis_protocol(raw_config: dict | None = None) -> dict[str, Any]:
         "robustness_slice_fields": tuple(str(field) for field in raw_slice_fields),
         "robustness_min_support": int(analysis_cfg.get("robustness_min_support", 10)),
     }
+
+
+def _resolve_execution_device(raw_config: dict, *, task: str | None = None) -> str:
+    train_cfg = raw_config.get("train", {})
+    single_task_cfg = raw_config.get("single_task", {})
+    single_task_train_cfg = single_task_cfg.get("train", {})
+    task_cfg = single_task_cfg.get("tasks", {}).get(task, {}) if task else {}
+    requested = _pick_config_value(
+        task_cfg.get("device"),
+        single_task_train_cfg.get("device") if task else None,
+        train_cfg.get("device"),
+        default="auto",
+    )
+    runtime_device = resolve_training_device(str(requested))
+    experiment_cfg = raw_config.get("experiment", {})
+    if bool(experiment_cfg.get("require_accelerator", False)):
+        require_accelerator(
+            runtime_device,
+            experiment_name=str(experiment_cfg.get("name", "This experiment")),
+        )
+    return runtime_device.resolved
 
 
 def _split_audit(
@@ -436,6 +489,7 @@ def run_single_task(args: argparse.Namespace) -> int:
     )
 
     raw_config = _read_model_config(args.config_path)
+    execution_device = _resolve_execution_device(raw_config, task=args.task)
     analysis_protocol = _analysis_protocol(raw_config)
     records = load_unified_records(args.input_path)
     split_random_state = _resolve_split_random_state(
@@ -464,13 +518,12 @@ def run_single_task(args: argparse.Namespace) -> int:
         split_random_state=split_random_state,
     )
 
-    trainer = SingleTaskTransformerTrainer(
-        _resolve_single_task_config(
-            raw_config,
-            args.task,
-            train_random_state=train_random_state,
-        )
+    trainer_config = _resolve_single_task_config(
+        raw_config,
+        args.task,
+        train_random_state=train_random_state,
     )
+    trainer = SingleTaskTransformerTrainer(replace(trainer_config, device=execution_device))
     fit_summary = trainer.fit(split["train"], valid_records=split["valid"] or None)
     export_dir = trainer.export(args.export_dir)
     test_predictions = trainer.predict(labeled_records_for_task(split["test"], args.task)) if split["test"] else []
@@ -525,6 +578,7 @@ def run_multitask(args: argparse.Namespace) -> int:
     from reviewguard.training.multitask import MultitaskTrainingConfig, MultitaskTrainingScaffold
 
     raw_config = _read_model_config(args.config_path)
+    execution_device = _resolve_execution_device(raw_config)
     analysis_protocol = _analysis_protocol(raw_config)
     records = load_unified_records(args.input_path)
     split_random_state = _resolve_split_random_state(
@@ -560,7 +614,20 @@ def run_multitask(args: argparse.Namespace) -> int:
         learning_rate=train_cfg.get("learning_rate", MultitaskTrainingConfig.learning_rate),
         weight_decay=train_cfg.get("weight_decay", MultitaskTrainingConfig.weight_decay),
         epochs=train_cfg.get("epochs", MultitaskTrainingConfig.epochs),
+        warmup_ratio=train_cfg.get("warmup_ratio", MultitaskTrainingConfig.warmup_ratio),
+        scheduler_type=train_cfg.get("scheduler_type", MultitaskTrainingConfig.scheduler_type),
+        max_grad_norm=train_cfg.get("max_grad_norm", MultitaskTrainingConfig.max_grad_norm),
+        gradient_accumulation_steps=train_cfg.get(
+            "gradient_accumulation_steps",
+            MultitaskTrainingConfig.gradient_accumulation_steps,
+        ),
+        gradient_checkpointing=train_cfg.get(
+            "gradient_checkpointing",
+            MultitaskTrainingConfig.gradient_checkpointing,
+        ),
         dropout=raw_config.get("dropout", MultitaskTrainingConfig.dropout),
+        pooling=raw_config.get("pooling", MultitaskTrainingConfig.pooling),
+        head_type=raw_config.get("head_type", MultitaskTrainingConfig.head_type),
         sentiment_loss_weight=loss_weights.get(
             "sentiment",
             MultitaskTrainingConfig.sentiment_loss_weight,
@@ -581,7 +648,7 @@ def run_multitask(args: argparse.Namespace) -> int:
             "early_stopping_patience",
             MultitaskTrainingConfig.early_stopping_patience,
         ),
-        device=train_cfg.get("device", MultitaskTrainingConfig.device),
+        device=execution_device,
         random_state=train_random_state,
     )
 
@@ -626,7 +693,6 @@ def run_multitask(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
-    ensure_export_dir(args.export_dir)
 
     if args.command == "baseline":
         return run_baseline(args)

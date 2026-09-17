@@ -1,0 +1,212 @@
+{
+  "sentiment": {
+    "multitask": {
+      "mean_source_macro_f1": 0.65053829372507,
+      "worst_slice_macro_f1": 0.4764595103578155,
+      "robustness_gap": 0.3481575667345091,
+      "slice_rows": [
+        {
+          "accuracy": 0.7227722772277227,
+          "macro_f1": 0.4764595103578155,
+          "weighted_f1": 0.7142137942607821,
+          "precision_macro": 0.5034165181224005,
+          "recall_macro": 0.4830065359477125,
+          "support": 101,
+          "per_label_support": {
+            "negative": 50,
+            "neutral": 0,
+            "positive": 51
+          },
+          "confusion_matrix": [
+            [
+              45,
+              0,
+              5
+            ],
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              23,
+              0,
+              28
+            ]
+          ],
+          "slice_value": "maide_up"
+        },
+        {
+          "accuracy": 0.8484848484848485,
+          "macro_f1": 0.8246170770923246,
+          "weighted_f1": 0.8484976702798486,
+          "precision_macro": 0.7920804369414102,
+          "recall_macro": 0.8925120772946858,
+          "support": 99,
+          "per_label_support": {
+            "negative": 48,
+            "neutral": 5,
+            "positive": 46
+          },
+          "confusion_matrix": [
+            [
+              44,
+              1,
+              3
+            ],
+            [
+              0,
+              5,
+              0
+            ],
+            [
+              9,
+              2,
+              35
+            ]
+          ],
+          "slice_value": "rureviews"
+        }
+      ]
+    },
+    "single_task": {
+      "mean_source_macro_f1": 0.5659167038135292,
+      "worst_slice_macro_f1": 0.5312316284538506,
+      "robustness_gap": 0.06937015071935715,
+      "slice_rows": [
+        {
+          "accuracy": 0.900990099009901,
+          "macro_f1": 0.6006017791732078,
+          "weighted_f1": 0.9008735253431152,
+          "precision_macro": 0.6021801943787759,
+          "recall_macro": 0.6009150326797386,
+          "support": 101,
+          "per_label_support": {
+            "negative": 50,
+            "neutral": 0,
+            "positive": 51
+          },
+          "confusion_matrix": [
+            [
+              47,
+              0,
+              3
+            ],
+            [
+              0,
+              0,
+              0
+            ],
+            [
+              7,
+              0,
+              44
+            ]
+          ],
+          "slice_value": "maide_up"
+        },
+        {
+          "accuracy": 0.7777777777777778,
+          "macro_f1": 0.5312316284538506,
+          "weighted_f1": 0.7567384604421642,
+          "precision_macro": 0.5391369047619047,
+          "recall_macro": 0.5443840579710145,
+          "support": 99,
+          "per_label_support": {
+            "negative": 48,
+            "neutral": 5,
+            "positive": 46
+          },
+          "confusion_matrix": [
+            [
+              45,
+              0,
+              3
+            ],
+            [
+              5,
+              0,
+              0
+            ],
+            [
+              14,
+              0,
+              32
+            ]
+          ],
+          "slice_value": "rureviews"
+        }
+      ]
+    },
+    "h3_indicator_comparison": {
+      "mean_source_macro_f1_improved": true,
+      "worst_slice_macro_f1_improved": false,
+      "robustness_gap_improved": false
+    }
+  },
+  "authenticity": {
+    "multitask": {
+      "mean_source_macro_f1": 0.8493586556627225,
+      "worst_slice_macro_f1": 0.8493586556627225,
+      "robustness_gap": 0.0,
+      "evaluated_slices": 1,
+      "slice_rows": [
+        {
+          "accuracy": 0.8514851485148515,
+          "macro_f1": 0.8493586556627225,
+          "weighted_f1": 0.8491814479250451,
+          "precision_macro": 0.8757309941520468,
+          "recall_macro": 0.8527450980392157,
+          "support": 101,
+          "per_label_support": {
+            "authentic": 51,
+            "fake": 50
+          },
+          "confusion_matrix": [
+            [
+              37,
+              14
+            ],
+            [
+              1,
+              49
+            ]
+          ],
+          "slice_value": "maide_up"
+        }
+      ]
+    },
+    "single_task": {
+      "mean_source_macro_f1": 0.7166753246753247,
+      "worst_slice_macro_f1": 0.7166753246753247,
+      "robustness_gap": 0.0,
+      "evaluated_slices": 1,
+      "slice_rows": [
+        {
+          "accuracy": 0.7326732673267327,
+          "macro_f1": 0.7166753246753247,
+          "weighted_f1": 0.716008743731516,
+          "precision_macro": 0.8074358974358975,
+          "recall_macro": 0.7350980392156863,
+          "support": 101,
+          "per_label_support": {
+            "authentic": 51,
+            "fake": 50
+          },
+          "confusion_matrix": [
+            [
+              25,
+              26
+            ],
+            [
+              1,
+              49
+            ]
+          ],
+          "slice_value": "maide_up"
+        }
+      ]
+    },
+    "note": "Only one authenticity source slice is available in the executed pilot test split, so source-wise robustness is not meaningfully resolved for H3."
+  }
+}
