@@ -1,0 +1,9 @@
+task,metric,model_a,model_b,observed_delta,ci_low,ci_high,p_value,cohens_dz,hedges_g,n_examples
+authenticity,accuracy,multitask,single-task-authenticity,-0.004571,-0.010857,0.002,0.176912,-0.272699,-0.218159,700
+authenticity,macro_f1,multitask,single-task-authenticity,-0.004573,-0.010909,0.001987,0.182909,-0.272357,-0.217885,700
+authenticity,accuracy,multitask,baseline,0.052571,0.030286,0.074857,0.0005,5.598942,4.479153,700
+authenticity,macro_f1,multitask,baseline,0.052764,0.030511,0.07491,0.0005,5.61056,4.488448,700
+sentiment,accuracy,multitask,single-task-sentiment,-0.00073,-0.004714,0.003386,0.757121,-0.114652,-0.091721,3012
+sentiment,macro_f1,multitask,single-task-sentiment,-0.001264,-0.010478,0.008143,0.801599,-0.138287,-0.110629,3012
+sentiment,accuracy,multitask,baseline,0.063015,0.050994,0.074635,0.0005,13.397462,10.717969,3012
+sentiment,macro_f1,multitask,baseline,0.054819,0.033673,0.073228,0.0005,6.274433,5.019546,3012

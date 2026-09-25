@@ -1,0 +1,641 @@
+% Final LaTeX version generated from the reviewed manuscript.
+% Compile with the bundled Tectonic runtime or XeLaTeX + BibTeX.
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=0.79in]{geometry}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,longtable,array,tabularx,makecell}
+\usepackage{calc}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{float}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{hyperref}
+\usepackage{xurl}
+\usepackage{ragged2e}
+\usepackage{titlesec}
+\newcounter{none} % keeps Pandoc's unnumbered longtable wrapper valid
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue,
+  breaklinks=true,
+  pdftitle={Development of a Multitask Transformer-Based Model and Web System for Joint Sentiment Analysis and AI-Generated Review Provenance Classification},
+  pdfauthor={Dias Kazikhanov and Aigul Meirmanova}
+}
+
+\setlength{\parindent}{0.5in}
+\setlength{\parskip}{0pt}
+\setlength{\emergencystretch}{3em}
+\setlength{\tabcolsep}{4pt}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcommand{\repo}[1]{\path{#1}}
+\titleformat{\section}{\normalfont\bfseries\large}{\thesection}{0.5em}{}
+\titleformat{\subsection}{\normalfont\itshape\normalsize}{\thesubsection}{0.5em}{}
+\captionsetup{font=small,labelfont=bf}
+\urlstyle{same}
+
+\begin{document}
+
+\begin{center}
+{\small UDC 004.021\par}
+\vspace{0.35em}
+{\bfseries\itshape Dias Kazikhanov,} Master's student, School of Software Engineering, Astana IT University, Astana, Kazakhstan\par
+{\itshape Aigul Meirmanova,} PhD, Postdoctoral Researcher, Assistant Professor, School of Software Engineering, Astana IT University, Astana, Kazakhstan\par
+\vspace{0.7em}
+{\bfseries\large DEVELOPMENT OF A MULTITASK TRANSFORMER-BASED MODEL AND WEB SYSTEM FOR JOINT SENTIMENT ANALYSIS AND AI-GENERATED REVIEW PROVENANCE CLASSIFICATION: A CONTROLLED MIXED-DOMAIN STUDY\par}
+\end{center}
+
+\begin{abstract}
+Online reviews combine an evaluative signal with information about how a text was produced. This article presents the completed experimental stage of a dissertation project that develops a multitask Transformer-based model and the ReviewGuard web system for joint review analysis. The model predicts three-way sentiment and a provenance label that is operationalized as human-authored versus AI-generated text in the MAiDE-up resource; this definition is narrower than universal fake-review detection. A corpus of 30,000 records was assembled from four open datasets. TF--IDF with logistic regression, two single-task XLM-RoBERTa models, and one shared-encoder multitask model were compared under one leakage-controlled split and five training seeds. The multitask model reached test Macro-F1 of 0.7709 $\pm$ 0.0087 for sentiment and 0.9526 $\pm$ 0.0094 for provenance, compared with 0.7161 and 0.8998 for the classical baseline. Differences from the single-task Transformer were inconclusive: $-0.0013$ for sentiment and $-0.0046$ for provenance. The result supports a compact shared service, but not a claim of positive transfer or universal authenticity detection. The web layer exposes predictions, confidence, truncation status, and research-context warnings for human-in-the-loop use.
+\end{abstract}
+
+\noindent\textbf{Keywords:} sentiment analysis; AI-generated review provenance; provenance classification; multitask learning; XLM-RoBERTa; e-commerce; reproducibility; web system.
+
+\section{Introduction}
+
+Online reviews influence product ranking, merchant reputation, customer
+trust, and purchase decisions. An e-commerce analytics service therefore
+needs to answer two different questions: what evaluation a reviewer
+expresses, and whether the text belongs to the provenance category
+represented in the training data. These questions are related because
+they use the same review text, but they are not interchangeable. A
+negative review is not automatically deceptive, and a classifier score
+is not independent evidence of misconduct.
+
+The dissertation topic is to develop a multitask Transformer-based model
+and web system for joint sentiment analysis and review authenticity
+detection in e-commerce. In the executed study, authenticity is defined
+narrowly and reproducibly through the binary MAiDE-up label:
+human-authored hotel review versus AI-generated hotel review. The paper
+therefore uses provenance classification when describing the empirical
+target and reserves broader authenticity language for the application
+goal.
+
+Multi-task learning provides a direct way to test whether one encoder
+can support both tasks through shared representations. XLM-RoBERTa is
+appropriate for the multilingual corpus because it was pretrained across
+100 languages \citep{conneau2020xlmr}. However, shared parameters do not guarantee
+positive transfer. The comparison with single-task models is essential,
+and the training protocol must be documented well enough to separate an
+architectural effect from differences in sampling or optimization.
+
+The contribution is fourfold. First, the study reports a completed
+30,000-record, five-seed evaluation. Second, it makes label provenance
+and the split audit explicit. Third, it separates the scientific
+comparison from the supporting web-system implementation. Fourth, it
+constrains the interpretation to the tested domain, label definition,
+and fixed evaluation protocol.
+
+\section{Related Work}
+
+The multi-task learning formulation treats a shared representation as an
+inductive bias that can improve generalization when tasks are related
+\citep{caruana1997multitask}. In modern NLP, pretrained Transformer encoders provide the
+shared representation, while task-specific heads allow different label
+spaces. The benefit is empirical rather than automatic: task imbalance,
+label sparsity, and gradient conflict can reduce or reverse transfer.
+
+XLM-RoBERTa extends this setting to multilingual text through
+cross-lingual pretraining \citep{conneau2020xlmr}. Its use in this study is motivated by
+the corpus composition, not by an assumption that all language slices
+are equally represented. The Russian portion dominates the merged
+corpus, while the provenance labels come from a multilingual hospitality
+dataset. This makes source- and language-aware evaluation important.
+
+Review authenticity has several non-equivalent meanings. Classical
+deceptive-opinion studies distinguish truthful and deceptive writing,
+whereas newer datasets focus on AI-generated reviews. MAiDE-up is
+valuable for the latter setting, but its human-versus-AI labels should
+not be generalized to all spam, incentive abuse, account takeover, or
+coordinated manipulation \citep{ignat2025maide}. The present study adopts that narrower
+semantics.
+
+Finally, a fixed test set and repeated seeds require careful
+interpretation. Statistical testing guidance for NLP recommends matching
+the test to the experimental unit and reporting uncertainty rather than
+treating one p-value as a complete argument \citep{dror2018hitchhiker}. This article
+therefore reports seed variation, paired confidence intervals, and
+approximate randomization comparisons.
+
+\section{Research Questions and Scope}
+
+The study investigates three questions:
+
+\begin{quote}
+• RQ1. Does multitask XLM-RoBERTa improve Macro-F1 over TF-IDF with
+logistic regression on sentiment or provenance under the fixed test
+protocol?
+
+• RQ2. Does multitask XLM-RoBERTa differ from single-task XLM-RoBERTa
+trained for the same task?
+
+• RQ3. Which data, label, and training properties limit transfer beyond
+this protocol and the ReviewGuard demonstration system?
+\end{quote}
+
+The principal hypotheses are deliberately modest. H1 predicts that
+multitask training will not materially underperform single-task training
+on sentiment. H2 predicts that both Transformer variants will exceed the
+classical baseline on provenance. H3 treats the web interface as an
+engineering deliverable, not as evidence of model interpretability or a
+substitute for external validation.
+
+\section{Data and Label Provenance}
+
+The processed input contains 30,000 normalized records and is identified
+by SHA-256 digest
+a296cf7bb8cb0dbb3eebd8a0cc9c478422e9f5959836bc4d20915f9f81c9c5fc. Four
+open sources were merged with explicit source identifiers. The source
+roles and label semantics are shown in Table 1 \citep{ignat2025maide,rureviews,perekrestok,wildberries}.
+
+\emph{Table 1 -- Corpus composition and label provenance.}
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2500}}
+  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2500}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2500}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2500}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+\textbf{Source}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{n}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Sentiment}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Provenance}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+MAiDE-up & 7,000 & Source label; negative/positive & 3,500
+human-authored and 3,500 AI-generated \\
+Perekrestok & 10,000 & Rating mapping: 1-2 negative, 3 neutral, 4-5
+positive & No label \\
+RuReviews & 3,000 & Native three-class dataset label & No label \\
+Wildberries & 10,000 & Rating mapping: 1-2 negative, 3 neutral, 4-5
+positive & No label \\
+\end{longtable}
+}
+
+All records have a sentiment label. There are 23,734 Russian records and
+6,266 records in Turkish, French, Korean, English, Chinese, Spanish,
+Italian, German, or Romanian. The domain mixture is 23,000 e-commerce
+records and 7,000 hospitality records. Provenance labels are available
+only for the 7,000 MAiDE-up records, so e-commerce rows contribute to
+sentiment loss but not to provenance loss.
+
+The rating-derived labels are a practical volume compromise, not
+independent manual annotation. The sentiment task therefore measures
+agreement with the project' s three-class rating mapping.
+It should not be interpreted as a universal linguistic definition of
+polarity. Similarly, the provenance task measures the MAiDE-up
+human-versus-AI distinction and should not be reported as a detector for
+every kind of fake review.
+
+\section{Methodology}
+
+\subsection{Leakage-Controlled Split}
+
+Using split seed 42, the corpus was divided into 23,975 training, 3,013
+validation, and 3,012 test records. Texts were case-folded and
+whitespace-normalized before splitting, then grouped by normalized text
+and stratified by source and available-label pair. The audit found 521
+exact and 564 normalized duplicate rows in the merged corpus, but zero
+cross-partition overlap by record identifier, exact text, or normalized
+text for every train, validation, and test pair. The test sentiment
+distribution is 710 negative, 204 neutral, and 2,098 positive; the
+provenance test is balanced at 350 authentic and 350 AI-generated
+examples.
+
+\subsection{Model Architecture}
+
+The classical reference uses TF-IDF unigrams and bigrams with up to
+50,000 features and a class-balanced logistic-regression classifier for
+each task. The Transformer systems use FacebookAI/xlm-roberta-base. The
+shared encoder produces a contextual representation from the first
+token. One MLP head predicts three sentiment classes and a second
+predicts two provenance classes; each head uses a GELU hidden layer and
+dropout of 0.1. For a record with both labels, the loss is the weighted
+sum of the two cross-entropies. When one label is absent, only the
+available task contributes to the loss. Single-task models use the same
+encoder and head design but optimize one label only.
+
+\subsection{Training Protocol}
+
+The local Apple Silicon configuration uses maximum sequence length 192,
+batch size 2, four-step gradient accumulation, gradient checkpointing,
+AdamW with learning rate 2e-5, weight decay 0.01, 10 percent linear
+warmup, a five-epoch maximum, and early stopping with patience 2.
+Multi-task training uses a source-balanced sampler and class-weighted
+cross-entropy; the single-task loop does not use the source-balanced
+sampler. Consequently, the multitask-versus-single-task comparison
+evaluates two configured training systems rather than one isolated
+architectural switch.
+
+Training was run on a Mac mini M2 Pro with 16 GB unified memory through
+the MPS backend. The recorded environment was Python 3.12.12 on macOS
+26.2 arm64. Transformer systems used seeds 11, 21, 42, 84, and 126.
+Checkpoints were selected using validation Macro-F1 and the test set was
+reserved for final evaluation. Macro-F1 is the primary metric because
+class balance differs across tasks; accuracy is reported as a secondary
+metric.
+
+\subsection{ReviewGuard Web System}
+
+The model is embedded in ReviewGuard, a reproducibility-oriented service
+with five stages: data normalization, training and checkpoint export,
+checkpoint loading, FastAPI inference, and a browser interface. The
+/health endpoint reports service and model readiness; /research-context
+returns the training scope and dataset warnings; and POST /analyze
+accepts a review and returns sentiment and provenance labels with
+confidence scores.
+
+The response also contains a lightweight transparency object: ranked
+task probabilities, token count, configured maximum length, a truncation
+flag, prediction margins, risk flags, and research-context warnings.
+This is an operational aid for a human reviewer, not a causal
+explanation of the model and not evidence that the predicted provenance
+label is factually true.
+
+\section{Experimental Design}
+
+Each Transformer variant was trained for five random seeds on the same
+fixed split. The classical baseline is deterministic under the fixed
+configuration. For Transformer systems, the article reports mean and
+standard deviation over seeds and a 95 percent t-interval for the mean.
+Paired comparisons use the same test examples: 2,000 bootstrap samples
+produce an interval for the seed-averaged difference, and an approximate
+randomization test uses 2,000 permutations. These intervals describe
+uncertainty within the chosen split; they do not quantify uncertainty
+from new sources, domains, or languages. We also computed worst-slice
+Macro-F1 by language, source, and domain with a minimum slice support of
+25.
+
+The comparison is intentionally bounded. It tests a shared encoder
+against two single-task encoders and a shallow text baseline under one
+data construction. It does not claim that the chosen source quotas
+represent the population of e-commerce reviews, that MAiDE-up labels
+cover human deception, or that a production threshold has been
+calibrated.
+
+\section{Results}
+
+\subsection{Main Test Metrics}
+
+For class $c$, precision is $P_c=TP_c/(TP_c+FP_c)$ and recall is $R_c=TP_c/(TP_c+FN_c)$. The reported Macro-P, Macro-R, and Macro-F1 are unweighted means over classes; Weighted-F1 weights class F1 by test-set support. All metrics are computed on the fixed test partition.
+
+\emph{Table 2 -- Test metrics. Transformer values are mean +/- standard
+deviation over five seeds.}
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2500}}
+  >{\centering\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2500}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2500}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 6\tabcolsep) * \real{0.2500}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+\textbf{Model family}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Task}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Macro-F1}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Accuracy}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+TF-IDF + logistic regression & Sentiment & 0.7161 & 0.8320 \\
+Single-task XLM-R & Sentiment & 0.7721 +/- 0.0087 & 0.8958 +/- 0.0038 \\
+Multitask XLM-R & Sentiment & 0.7709 +/- 0.0087 & 0.8950 +/- 0.0047 \\
+TF-IDF + logistic regression & Provenance & 0.8998 & 0.9000 \\
+Single-task XLM-R & Provenance & 0.9571 +/- 0.0088 & 0.9571 +/-
+0.0087 \\
+Multitask XLM-R & Provenance & 0.9526 +/- 0.0094 & 0.9526 +/- 0.0094 \\
+Majority baseline & Sentiment & 0.2737 & 0.6965 \\
+Majority baseline & Provenance & 0.3333 & 0.5000 \\
+\end{longtable}
+}
+
+Multitask XLM-R exceeds the TF-IDF baseline by 0.0548 Macro-F1 for
+sentiment and 0.0528 for provenance. The single-task Transformer has
+slightly higher means on both tasks, but the gaps are small relative to
+seed variation. The main practical result is therefore a compact shared
+model with comparable average quality, not a demonstrated accuracy
+advantage over separate models.
+
+\subsection{Paired Comparisons}
+
+\emph{Table 3 -- Paired Macro-F1 comparisons for the multitask model.
+Delta equals multitask minus comparator.}
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+\textbf{Task}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Comparator}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Delta}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{95\% CI}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{p (approx. randomization)}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Sentiment & Single-task XLM-R & -0.0013 & {[}-0.0105, 0.0081{]} &
+0.8016 \\
+Sentiment & TF-IDF + logistic regression & +0.0548 & {[}0.0337,
+0.0732{]} & 0.0005 \\
+Provenance & Single-task XLM-R & -0.0046 & {[}-0.0109, 0.0020{]} &
+0.1829 \\
+Provenance & TF-IDF + logistic regression & +0.0528 & {[}0.0305,
+0.0749{]} & 0.0005 \\
+\end{longtable}
+}
+
+\emph{Table 4 -- Additional macro-averaged test metrics. Values are mean
++/- standard deviation over five seeds.}
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+\textbf{Model}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Task}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Macro-P}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Macro-R}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Weighted F1}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+TF-IDF + logistic regression & Sentiment & 0.6919 & 0.7688 & 0.8446 \\
+Single-task XLM-R & Sentiment & 0.7740 +/- 0.0028 & 0.7737 +/- 0.0173 &
+0.8964 +/- 0.0035 \\
+Multitask XLM-R & Sentiment & 0.7687 +/- 0.0104 & 0.7762 +/- 0.0180 &
+0.8962 +/- 0.0043 \\
+TF-IDF + logistic regression & Provenance & 0.9034 & 0.9000 & 0.8998 \\
+Single-task XLM-R & Provenance & 0.9577 +/- 0.0083 & 0.9571 +/- 0.0087 &
+0.9571 +/- 0.0088 \\
+Multitask XLM-R & Provenance & 0.9531 +/- 0.0090 & 0.9526 +/- 0.0094 &
+0.9526 +/- 0.0094 \\
+\end{longtable}
+}
+
+\emph{Table 5 -- Per-class test metrics for the multitask model. Values
+are mean +/- standard deviation over five seeds.}
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\raggedright\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}
+  >{\centering\arraybackslash}p{(\linewidth - 8\tabcolsep) * \real{0.2000}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+\textbf{Task}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Class}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Precision}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{Recall}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+\textbf{F1}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Sentiment & Negative & 0.8700 +/- 0.0156 & 0.8566 +/- 0.0192 & 0.8630
++/- 0.0083 \\
+Sentiment & Neutral & 0.4887 +/- 0.0415 & 0.5284 +/- 0.0663 & 0.5041 +/-
+0.0205 \\
+Sentiment & Positive & 0.9475 +/- 0.0063 & 0.9437 +/- 0.0047 & 0.9456
++/- 0.0023 \\
+Provenance & Authentic & 0.9654 +/- 0.0073 & 0.9389 +/- 0.0208 & 0.9518
++/- 0.0100 \\
+Provenance & AI-generated & 0.9408 +/- 0.0190 & 0.9663 +/- 0.0077 &
+0.9533 +/- 0.0088 \\
+\end{longtable}
+}
+
+The additional metrics expose an important asymmetry that Macro-F1 alone
+hides: the neutral sentiment class is substantially weaker (F1 0.5041
++/- 0.0205) than negative and positive sentiment, while the two
+provenance classes remain balanced. The 95 percent t-based confidence
+intervals across seeds are {[}0.7600, 0.7817{]} for multitask sentiment
+Macro-F1 and {[}0.9409, 0.9642{]} for multitask provenance Macro-F1.
+Paired Cohen' s dz values are -0.1383 and -0.2724 for
+multitask versus single-task sentiment and provenance, respectively, and
+6.2744 and 5.6106 versus the classical baseline; because only five seeds
+are available, these effect sizes are descriptive. AUROC, PR-AUC,
+calibration error, and Brier score are not reported because the release
+artifacts contain aggregate confusion-matrix metrics but no per-example
+probability outputs; these metrics should be added in the next
+evaluation run.
+
+The majority baselines in Table 2 are 0.2737 Macro-F1 and 0.6965
+accuracy for sentiment, and 0.3333 Macro-F1 and 0.5000 accuracy for
+provenance. For the four Macro-F1 comparisons in Table 3, Holm-adjusted
+p-values are 0.0020 for both multitask-versus-baseline comparisons,
+0.3658 for provenance versus single-task, and 0.8016 for sentiment
+versus single-task. These inferences remain conditional on the fixed
+test split and are exploratory because only five training seeds are
+available.
+
+A robustness audit across language, source, and domain slices also
+limits the generalization claim. Across the five seeds, the
+worst-language Macro-F1 averaged 0.5688 +/- 0.0220 for sentiment and
+0.8905 +/- 0.0267 for provenance; the worst-source and worst-domain
+sentiment Macro-F1 values averaged 0.6210 +/- 0.0039 and 0.6223 +/-
+0.0030. Several slices contain no neutral sentiment examples, so these
+slice scores are diagnostic and should not be interpreted as fully
+comparable three-class estimates.
+
+The intervals for the multitask-versus-single-task comparisons cross
+zero, so the experiment does not establish positive transfer. Against
+the classical baseline, the intervals are positive and the randomization
+p-value is 0.0005 for both tasks, the smallest value resolvable with
+2,000 permutations. The answer to RQ1 is positive within the fixed
+protocol; the answer to RQ2 is that no reliable difference is
+established.
+
+\section{Discussion}
+
+The result pattern is consistent across tasks: Transformer
+representations are clearly stronger than the selected TF-IDF reference,
+while the distinction between shared and single-task Transformer
+training is small. This may indicate that the two targets use partially
+shared lexical and semantic information without providing enough
+independent provenance supervision to produce measurable positive
+transfer. It may also reflect the non-isolated sampler difference. The
+current evidence cannot distinguish these explanations.
+
+For the dissertation system, the compact shared encoder remains useful.
+It provides one exportable checkpoint, one API contract, and one web
+interface for two predictions. That engineering advantage should not be
+converted into a scientific claim that the shared model is more
+accurate. A deployment should expose confidence and truncation
+information, require human review for high-impact decisions, and retain
+the source and label warnings returned by the research context.
+
+The web system also clarifies the boundary between a model and a
+moderation policy. A provenance score is a research signal tied to
+MAiDE-up' s human-versus-AI definition. It is not a
+decision that a reviewer is fraudulent, and it should not be used for
+automatic penalties without independent validation, calibration, and an
+appeal process.
+
+\section{Limitations and Next Steps}
+
+\begin{quote}
+• Provenance validity: all provenance labels come from MAiDE-up and the
+hotel domain. They contrast human-authored and AI-generated reviews and
+do not test human-written deception, incentive abuse, or coordinated
+spam.
+
+• Heterogeneous sentiment supervision: Perekrestok and Wildberries
+labels are derived from ratings, so source and label-generation effects
+may be confounded with language and domain effects.
+
+• One fixed split: five training seeds measure initialization
+sensitivity but do not replace source-held-out, language-held-out, or
+external evaluation. Before redistribution, source-specific provenance
+subtype metadata must also be audited against authenticity\_label; the
+reported metrics use the authenticity\_label field directly.
+
+• Duplicate structure and quota sampling: the audit prevents observable
+cross-partition text leakage, but normalized duplicates remain inside
+the merged corpus and fixed source quotas are not a random sample of all
+reviews.
+
+• Non-isolated ablation: the multitask system uses source-balanced
+sampling while the single-task system does not. A stricter architectural
+ablation must equalize sampling and optimization schedules.
+
+• Deployment validation: probabilities were not calibrated, a moderation
+threshold was not selected, and the web system is decision support
+rather than an autonomous enforcement service.
+\end{quote}
+
+The next dissertation stage should collect or obtain independent
+provenance labels in an e-commerce domain, repeat the comparison with
+identical samplers, report source- and language-held-out results,
+calibrate probabilities, and evaluate the complete API workflow with
+representative user scenarios. These steps would test generalization
+rather than only extending the training corpus.
+
+\section{Conclusion}
+
+This article presents a reproducible multitask XLM-RoBERTa model and
+ReviewGuard web system for joint sentiment analysis and review
+provenance classification. On a leakage-controlled, partially labelled
+corpus of 30,000 records, multitask training increased Macro-F1 over
+TF-IDF with logistic regression from 0.7161 to 0.7709 for sentiment and
+from 0.8998 to 0.9526 for provenance. Single-task Transformer systems
+had slightly higher means, and paired intervals did not confirm a
+difference.
+
+The defensible conclusion is therefore conditional. A shared encoder can
+support both predictions in one service without a clear average-quality
+loss under this protocol, but the experiment does not prove positive
+transfer and does not establish universal fake-review detection. The
+strongest next test is an external, source-held-out and domain-held-out
+evaluation with independently defined provenance labels.
+
+\section*{Data Availability and Reproducibility}
+
+The project repository contains the data-normalization code, training
+CLI, configuration snapshot, exported model format, API service, and
+aggregated reports. The principal reproducibility artifacts include
+data/processed/joint\_reviews.article30k.jsonl,
+configs/model.article30k.mac\_m2\_16gb.yaml, the multiseed report and
+statistics directories, and the split/leakage audit. The complete-run
+manifest records commit 64cf0a580d4a28434454aba763bec51ff052c689, Python
+3.12.12, macOS 26.2 arm64, the MPS backend, split seed 42, and training
+seeds 11, 21, 42, 84, and 126. The corpus digest is given in Section 4.
+Redistribution of source records follows the original dataset terms;
+exact reproduction should use the cited dataset cards and recorded
+configuration rather than silently substituting newer versions. The
+repository was dirty during the run, so the modified paths must be
+preserved with any supplementary artifact.
+
+\section*{Ethics Statement}
+
+No participants were recruited and no new personal data were collected.
+The study uses textual records from open research sources. The release
+package does not reproduce raw review text or direct identifiers; the
+locally processed corpus may retain source-specific identifiers for
+audit purposes and must not be redistributed without checking the
+original licenses and applying an explicit privacy/PII review.
+Provenance predictions are research signals, not standalone evidence of
+author misconduct.
+
+\section*{CRediT Author Contributions}
+
+Dias Kazikhanov: conceptualization, methodology, software, data
+curation, formal analysis, validation, visualization, writing - original
+draft, and writing - review and editing. Supervisor: A. Meirmanova.
+
+\section*{Funding and Conflict of Interest}
+
+No external funding or conflict-of-interest declaration was available in
+the project materials at the time of writing; the authors should confirm
+the official statement required by the target venue before submission.
+
+\section*{AI Use Disclosure}
+
+Generative AI was used as an auxiliary tool for manuscript structure and
+language drafting. Numerical results, experimental configuration, data
+claims, and references were checked against repository artifacts and the
+cited primary sources. The author remains responsible for the final
+manuscript, interpretation, and compliance with the submission
+venue' s policies.
+
+\bibliographystyle{unsrtnat}
+\bibliography{article_improved_en_meirmanova_reviewed}
+
+\section*{Information about Authors}
+
+\emph{Dias Kazikhanov -- Master's student, School of Software
+Engineering, Astana IT University, Astana, Kazakhstan.}
+
+\emph{Aigul Meirmanova -- PhD, Postdoctoral Researcher, Assistant
+Professor, School of Software Engineering, Astana IT University, Astana,
+Kazakhstan.}
+
+\end{document}

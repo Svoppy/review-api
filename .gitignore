@@ -1,4 +1,7 @@
 .venv/
+.venv312/
+.tmp_latex/
+.tmp_meirmanova/
 __pycache__/
 .pytest_cache/
 .mypy_cache/

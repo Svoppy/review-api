@@ -1,0 +1,48 @@
+{
+  "rows": [
+    {
+      "baseline_macro_f1_mean": 0.7160613003914441,
+      "baseline_macro_f1_std": 0.0,
+      "multitask_macro_f1_mean": 0.7708807487853704,
+      "multitask_macro_f1_std": 0.008736956618479707,
+      "multitask_vs_baseline_ci_high": 0.07322826805824788,
+      "multitask_vs_baseline_ci_low": 0.033673368701756454,
+      "multitask_vs_baseline_delta": 0.05481944839392623,
+      "multitask_vs_baseline_note": "significant gain (p=0.0005, 95% CI [0.0337, 0.0732])",
+      "multitask_vs_baseline_p_value": 0.0004997501249375312,
+      "multitask_vs_baseline_verdict": "positive_transfer",
+      "multitask_vs_single_task_ci_high": 0.008143272729707635,
+      "multitask_vs_single_task_ci_low": -0.010478319154539034,
+      "multitask_vs_single_task_delta": -0.0012640884290479714,
+      "multitask_vs_single_task_note": "no clear difference (p=0.8016, 95% CI [-0.0105, 0.0081])",
+      "multitask_vs_single_task_p_value": 0.8015992003998001,
+      "multitask_vs_single_task_verdict": "inconclusive",
+      "single_task_macro_f1_mean": 0.7721448372144183,
+      "single_task_macro_f1_std": 0.00871488384765889,
+      "task": "sentiment"
+    },
+    {
+      "baseline_macro_f1_mean": 0.8997905827688885,
+      "baseline_macro_f1_std": 0.0,
+      "multitask_macro_f1_mean": 0.9525548789793071,
+      "multitask_macro_f1_std": 0.009404461087114336,
+      "multitask_vs_baseline_ci_high": 0.07491012774860159,
+      "multitask_vs_baseline_ci_low": 0.030510651765581175,
+      "multitask_vs_baseline_delta": 0.05276429621041863,
+      "multitask_vs_baseline_note": "significant gain (p=0.0005, 95% CI [0.0305, 0.0749])",
+      "multitask_vs_baseline_p_value": 0.0004997501249375312,
+      "multitask_vs_baseline_verdict": "positive_transfer",
+      "multitask_vs_single_task_ci_high": 0.0019865992163629613,
+      "multitask_vs_single_task_ci_low": -0.010909023961344577,
+      "multitask_vs_single_task_delta": -0.004573376192299983,
+      "multitask_vs_single_task_note": "no clear difference (p=0.1829, 95% CI [-0.0109, 0.0020])",
+      "multitask_vs_single_task_p_value": 0.18290854572713644,
+      "multitask_vs_single_task_verdict": "inconclusive",
+      "single_task_macro_f1_mean": 0.957128255171607,
+      "single_task_macro_f1_std": 0.008761965972079159,
+      "task": "authenticity"
+    }
+  ],
+  "source_multiseed_summary": "reports/multiseed/article30k-m2pro-retry1/summary.json",
+  "source_statistics_summary": "reports/multiseed/article30k-m2pro-retry1_statistics/statistics_summary.json"
+}

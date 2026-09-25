@@ -1,0 +1,117 @@
+{
+  "completed_stages": [
+    "preflight",
+    "multiseed_training",
+    "statistical_analysis",
+    "task_ablation"
+  ],
+  "config": {
+    "sha256": "70352429b1ad2c1b1109752362936212858e355ad5227a0aa81bc28eb5a9ded3",
+    "snapshot_path": "reports/multiseed/article30k-m2pro-retry1/config.used.yaml",
+    "source_path": "configs/model.article30k.mac_m2_16gb.yaml"
+  },
+  "device": {
+    "effective": "mps",
+    "requested": "mps"
+  },
+  "input": {
+    "path": "data/processed/joint_reviews.article30k.jsonl",
+    "sha256": "a296cf7bb8cb0dbb3eebd8a0cc9c478422e9f5959836bc4d20915f9f81c9c5fc"
+  },
+  "kind": "article_release",
+  "split_seed": 42,
+  "stages": [
+    {
+      "command": [
+        "/Users/diaskazikhanov/Desktop/aitu/nirm/.venv312/bin/python",
+        "/Users/diaskazikhanov/Desktop/aitu/nirm/scripts/preflight_article_experiment.py",
+        "--input",
+        "data/processed/joint_reviews.article30k.jsonl",
+        "--config",
+        "reports/multiseed/article30k-m2pro-retry1/config.used.yaml",
+        "--output",
+        "reports/preflight/article30k-m2pro-retry1_preflight.json",
+        "--split-seed",
+        "42",
+        "--strict"
+      ],
+      "name": "preflight"
+    },
+    {
+      "command": [
+        "/Users/diaskazikhanov/Desktop/aitu/nirm/.venv312/bin/python",
+        "/Users/diaskazikhanov/Desktop/aitu/nirm/scripts/run_multiseed_experiments.py",
+        "--input",
+        "data/processed/joint_reviews.article30k.jsonl",
+        "--config",
+        "reports/multiseed/article30k-m2pro-retry1/config.used.yaml",
+        "--output-root",
+        "models/multiseed/article30k-m2pro",
+        "--report-dir",
+        "reports/multiseed/article30k-m2pro-retry1",
+        "--split-seed",
+        "42",
+        "--train-seeds",
+        "11",
+        "21",
+        "42",
+        "84",
+        "126",
+        "--python",
+        "/Users/diaskazikhanov/Desktop/aitu/nirm/.venv312/bin/python",
+        "--skip-existing"
+      ],
+      "name": "multiseed_training"
+    },
+    {
+      "command": [
+        "/Users/diaskazikhanov/Desktop/aitu/nirm/.venv312/bin/python",
+        "/Users/diaskazikhanov/Desktop/aitu/nirm/scripts/analyze_multiseed_statistics.py",
+        "--input",
+        "data/processed/joint_reviews.article30k.jsonl",
+        "--multiseed-root",
+        "models/multiseed/article30k-m2pro",
+        "--summary-json",
+        "reports/multiseed/article30k-m2pro-retry1/summary.json",
+        "--output-dir",
+        "reports/multiseed/article30k-m2pro-retry1_statistics",
+        "--split-seed",
+        "42",
+        "--train-seeds",
+        "11",
+        "21",
+        "42",
+        "84",
+        "126",
+        "--bootstrap-samples",
+        "2000",
+        "--randomization-samples",
+        "2000",
+        "--device",
+        "auto"
+      ],
+      "name": "statistical_analysis"
+    },
+    {
+      "command": [
+        "/Users/diaskazikhanov/Desktop/aitu/nirm/.venv312/bin/python",
+        "/Users/diaskazikhanov/Desktop/aitu/nirm/scripts/build_task_ablation_report.py",
+        "--multiseed-summary",
+        "reports/multiseed/article30k-m2pro-retry1/summary.json",
+        "--statistics-summary",
+        "reports/multiseed/article30k-m2pro-retry1_statistics/statistics_summary.json",
+        "--output-dir",
+        "reports/multiseed/article30k-m2pro-retry1_ablation"
+      ],
+      "name": "task_ablation"
+    }
+  ],
+  "status": "complete",
+  "train_seeds": [
+    11,
+    21,
+    42,
+    84,
+    126
+  ]
+}

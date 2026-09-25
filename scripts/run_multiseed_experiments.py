@@ -147,6 +147,9 @@ def make_child_env(repo_root: Path) -> dict[str, str]:
     src_path = str(repo_root / "src")
     existing = env.get("PYTHONPATH")
     env["PYTHONPATH"] = src_path if not existing else os.pathsep.join((src_path, existing))
+    # Training can run for many hours on Apple Metal.  Flush each progress line so
+    # a stopped child leaves an actionable trace in its per-seed log.
+    env["PYTHONUNBUFFERED"] = "1"
     return env
 
 
@@ -227,12 +230,19 @@ def run_one_experiment(
         )
         print(f"[run] {spec.model_id} {seed_tag(train_seed)}")
         print("      " + " ".join(command))
-        subprocess.run(
-            command,
-            check=True,
-            cwd=repo_root,
-            env=make_child_env(repo_root),
-        )
+        log_path = export_dir / "run.log"
+        with log_path.open("a", encoding="utf-8", buffering=1) as run_log:
+            run_log.write(f"[command] {' '.join(command)}\n")
+            completed = subprocess.run(
+                command,
+                cwd=repo_root,
+                env=make_child_env(repo_root),
+                stdout=run_log,
+                stderr=subprocess.STDOUT,
+            )
+            run_log.write(f"[return_code] {completed.returncode}\n")
+        if completed.returncode:
+            raise subprocess.CalledProcessError(completed.returncode, command)
         report = read_json(report_path)
 
     return {

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import math
 import random
 from collections import Counter
@@ -325,6 +326,15 @@ class MultitaskTrainingScaffold:
                 else:
                     epochs_without_improvement += 1
             history.append(epoch_summary)
+            progress = {
+                "kind": "multitask_epoch",
+                "seed": self.config.random_state,
+                "epoch": epoch,
+                "epochs_configured": self.config.epochs,
+                "train_loss": epoch_summary["train_loss"],
+                "validation_mean_macro_f1": epoch_summary.get("validation_score"),
+            }
+            print(f"[training-progress] {json.dumps(progress, ensure_ascii=False)}", flush=True)
 
             if (
                 valid_records
