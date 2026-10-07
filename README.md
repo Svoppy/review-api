@@ -376,3 +376,15 @@ PYTHONPATH=src python scripts/generate_defense_demo.py
 - [Final article draft (RU)](docs/article_final_ru.md)
 - [Final article in LaTeX (EN)](docs/article_final_en.tex)
 - [Results table templates (EN)](docs/results_tables_template_en.md)
+
+## Software Development and Integration assignment
+
+This repository is the practical project for Assignment 3. ReviewGuard is a scientific tool for preparing review datasets, training and evaluating sentiment and authenticity models, and serving analysis through FastAPI. It uses Python, PyTorch, Hugging Face Transformers, pandas, scikit-learn, FastAPI, and pytest; see [the technology rationale and workflow](docs/assignment3_report.md).
+
+- GitHub repository: https://github.com/Svoppy/review-api
+- CI workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml), run on pushes, pull requests, and manual dispatch
+- Issues: https://github.com/Svoppy/review-api/issues (use the included bug report template)
+- License: [MIT](LICENSE)
+- Assignment report: [PDF](output/pdf/assignment3_software_development_integration.pdf) and [editable Markdown source](docs/assignment3_report.md)
+
+Run automated tests locally with `python -m pip install -e . pytest` followed by `PYTHONPATH=src python -m pytest -q`.
