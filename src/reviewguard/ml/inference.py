@@ -4,12 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-import torch
-from transformers import AutoTokenizer
-
 from reviewguard.config import settings
 from reviewguard.ml.datasets import AUTHENTICITY_LABELS, SENTIMENT_LABELS
-from reviewguard.ml.modeling import MultiTaskTransformer
 
 
 class ModelNotReadyError(RuntimeError):
@@ -20,7 +16,7 @@ class ReviewAnalyzer:
     def __init__(self, checkpoint_dir: Path | None = None, model_name: str | None = None) -> None:
         self.checkpoint_dir = checkpoint_dir or settings.checkpoint_dir
         self.model_name = model_name or settings.model_name
-        self.device = torch.device(settings.device)
+        self.device = settings.device
 
     @staticmethod
     def _top_probabilities(labels: list[str], probabilities: list[float], top_k: int = 3) -> list[dict[str, object]]:
@@ -151,6 +147,17 @@ class ReviewAnalyzer:
                 "No trained checkpoint found yet. Train and export a model into models/latest first."
             )
 
+        try:
+            import torch
+            from transformers import AutoTokenizer
+
+            from reviewguard.ml.modeling import MultiTaskTransformer
+        except ImportError as exc:
+            raise RuntimeError(
+                "Model inference dependencies are missing. Install the reviewguard[inference] extra."
+            ) from exc
+
+        self.device = torch.device(settings.device)
         metadata = self.checkpoint_metadata() or {}
         self.metadata = metadata
         self.tokenizer = AutoTokenizer.from_pretrained(self.checkpoint_dir)
@@ -161,6 +168,8 @@ class ReviewAnalyzer:
     def analyze(self, text: str) -> dict[str, object]:
         if not hasattr(self, "model"):
             self.load()
+
+        import torch
 
         max_length = int(self.metadata.get("max_length", settings.max_length))
         raw_token_count = len(
