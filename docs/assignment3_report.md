@@ -4,7 +4,7 @@
 **Repository:** https://github.com/Svoppy/review-api
 **Prepared:** October 2026
 
-This analytical report covers the requested theory and relates it to the current ReviewGuard repository. GitHub access was unavailable during preparation; remote visibility and hosted CI status are not claimed as verified.
+This analytical report covers the requested theory and relates it to the current ReviewGuard repository. The assignment branch is published on the public repository, and its GitHub Actions test run passed. The branch has not yet been merged into the default branch.
 
 ## 1. Software development process and organization
 
@@ -44,7 +44,7 @@ Git stores snapshots efficiently, supports branches and merges, and lets users i
 
 Git and GitHub are not the same thing. Git is a version control system that runs locally or with any compatible remote. GitHub is a hosted collaboration platform built around Git repositories. It adds repository permissions, pull requests, issue tracking, project discussions, and hosted automation. Git can be used without GitHub; GitHub cannot replace the local history and branching model of Git. Other hosting platforms provide similar services, and a Git repository can have multiple remotes.
 
-ReviewGuard already has a Git repository and a configured remote at https://github.com/Svoppy/review-api. The active local branch is `dissertation-mvp`. A configured remote proves the intended destination, but does not prove public visibility or that the latest local files have been pushed. Since this environment could not resolve GitHub, live visibility and the current remote issue list could not be confirmed during preparation. The report includes the shareable repository and workflow URLs, with that verification boundary stated explicitly.
+ReviewGuard already has a Git repository and a configured remote at https://github.com/Svoppy/review-api. The active local branch is `dissertation-mvp`. The assignment deliverables are published on `feature/assignment3-software-integration`. GitHub metadata confirmed that the repository is public (`private: false`). The repository issue endpoint returned no existing issues at the time of verification; the issue tracker is available and includes a bug report template.
 
 ## 5. GitHub workflow, documentation, and project governance
 
@@ -52,7 +52,7 @@ A simple GitHub collaboration flow begins with an issue describing a problem or 
 
 A public repository should explain its purpose, installation, commands, expected inputs and outputs, limitations, contribution path, and license. A license is legally important: without an explicit license, public visibility alone does not grant general permission to reuse the code. This project includes an MIT license for repository code and documentation; model and dataset licenses remain separate and must be checked at their original sources. The bug report template asks for a minimal reproduction and environment while warning users not to expose private review data.
 
-The repository README links to the assignment report, license, issue tracker, and CI workflow. The project URL is https://github.com/Svoppy/review-api and the workflow configuration is https://github.com/Svoppy/review-api/blob/dissertation-mvp/.github/workflows/ci.yml. The practical project uses Git for history, GitHub as the intended remote and collaboration surface, and Actions for hosted checks. A workflow file in the repository is configuration; it is not proof that a hosted run succeeded. The first successful run and public visibility should be checked on GitHub after the changes are pushed. The current network restriction prevents claiming that step as complete.
+The repository README links to the assignment report, license, issue tracker, and CI workflow. The project URL is https://github.com/Svoppy/review-api and the published workflow configuration is https://github.com/Svoppy/review-api/blob/feature/assignment3-software-integration/.github/workflows/ci.yml. Run 37610680570 completed successfully on October 7, 2026: https://github.com/Svoppy/review-api/actions/runs/37610680570. The repository is public. The assignment branch is published and tracks `origin`; it has not been merged into the default branch.
 
 For research software, repository governance also includes stewardship of data. Large datasets, model checkpoints, credentials, and private inputs should not be committed by default. ReviewGuard’s ignore rules exclude generated model artifacts and raw/processed data. Public code should point to lawful data sources and document preparation steps without redistributing material that the project does not have rights to share. These practices help keep the repository useful and reduce accidental disclosure.
 
@@ -88,13 +88,13 @@ The implementation must be interpreted within its scientific boundary. The code 
 
 ## 9. Verification, challenges, and conclusion
 
-Local verification for this assignment consists of inspecting the complete one-page brief, reviewing the repository structure and existing tests, adding the workflow and project materials, and running the test suite. The expected CI command is `PYTHONPATH=src python -m pytest -q`; a successful local run provides evidence about this checkout, while a green GitHub Actions run must be confirmed on the remote after publication. The GitHub host could not be reached from this environment, so push status, public visibility, issue tracker contents, and hosted workflow results remain unverified.
+Local verification for this assignment consists of inspecting the complete one-page brief, reviewing the repository structure and existing tests, adding the workflow and project materials, and running the test suite. The expected CI command is `PYTHONPATH=src python -m pytest -q`. The local suite passed 71 tests in the available Python 3.14 environment. GitHub Actions then passed the test-suite step under the pinned Python 3.12 target; the run is available at https://github.com/Svoppy/review-api/actions/runs/37610680570. The public repository was confirmed through GitHub metadata. The issues endpoint returned an empty list during verification, and the report-template is included in the published branch.
 
 A challenge is the scale of the existing research codebase and its dependency stack: model libraries increase installation time, and meaningful model training is too expensive for every commit. The solution is to keep CI focused on deterministic tests and treat large experiments as separately configured research runs. Another challenge is the difference between software capability and empirical evidence. Documentation must not imply that model support, a dataset adapter, or a passing unit test establishes a scientific conclusion.
 
 The work demonstrates a complete development approach: requirements and architecture guide implementation; technology selection follows research needs; Git records changes; GitHub provides the intended public collaboration location; tests check contracts; and Actions automates continuous integration. The repository already provides the core scientific application, and the added CI, license, issue template, report, and README links make that work easier to inspect and reuse.
 
-The next completion step is operational: push the prepared changes to the user’s GitHub repository, verify that the repository is public, inspect the issue page and license detection, and confirm a green Actions run. These remote checks could not be performed offline. Subject to that verification, the project meets the assignment’s practical and theoretical goals while remaining honest about its research limits.
+The assignment changes are published on the public GitHub repository in a dedicated branch, and its CI run is green. The remaining collaboration step is to merge that branch into the default branch when it is reviewed. The work meets the assignment’s theoretical and practical goals while remaining honest about research limits.
 
 ## References
 
