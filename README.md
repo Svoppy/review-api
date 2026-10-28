@@ -389,3 +389,18 @@ This repository is the practical project for Assignment 3. ReviewGuard is a scie
 - Vercel CD setup: [deployment guide](docs/vercel_deployment.md)
 
 Run automated tests locally with `python -m pip install -e ".[research,dev]"` followed by `PYTHONPATH=src python -m pytest -q`. For serving a trained model without research and training tools, install `reviewguard[inference]`.
+
+## DevOps and CI/CD assignment
+
+Assignment 5 adds a root [`Dockerfile`](Dockerfile), a root [`Jenkinsfile`](Jenkinsfile), and a localhost Jenkins Compose setup under [`devops/jenkins/`](devops/jenkins/). The Jenkins pipeline installs the project and research test dependencies, runs pytest, builds a small API image, and checks the running container's `/health` endpoint. The default Docker image includes inference dependencies; mount a trained checkpoint at `/models/latest` when running the model API. The optional `INSTALL_INFERENCE=0` build creates a smaller image for API startup and CI health checks only.
+
+Start the local Jenkins service with Docker Compose:
+
+```bash
+PROJECT_ROOT="$(pwd)" docker compose -f devops/jenkins/compose.yml up -d --build
+```
+
+Open `http://127.0.0.1:8080`, complete the first-run setup, create a Pipeline job, and select **Pipeline script from SCM**. For a published branch, set the repository URL to `https://github.com/Svoppy/review-api.git`, select that branch, and leave the script path as `Jenkinsfile`. Docker Hub publishing and Kubernetes deployment are intentionally optional and need registry credentials or a target cluster.
+
+- Combined Assignment 5 report (theoretical and practical parts): [PDF](output/assignment5/assignment5_report.pdf), [editable DOCX](output/assignment5/assignment5_report.docx), and [source](docs/assignment5/assignment5_report.md)
+- Jenkins run evidence: successful build #10 is shown in the accompanying Jenkins Stage View screenshot.
