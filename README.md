@@ -403,4 +403,5 @@ PROJECT_ROOT="$(pwd)" docker compose -f devops/jenkins/compose.yml up -d --build
 Open `http://127.0.0.1:8080`, complete the first-run setup, create a Pipeline job, and select **Pipeline script from SCM**. For a published branch, set the repository URL to `https://github.com/Svoppy/review-api.git`, select that branch, and leave the script path as `Jenkinsfile`. Docker Hub publishing and Kubernetes deployment are intentionally optional and need registry credentials or a target cluster.
 
 - Combined Assignment 5 report (theoretical and practical parts): [PDF](output/assignment5/assignment5_report.pdf), [editable DOCX](output/assignment5/assignment5_report.docx), and [source](docs/assignment5/assignment5_report.md)
+- Assignment 5 presentation in English: [PowerPoint](output/presentations/assignment5/assignment5_devops_ci_cd.pptx), [PDF](output/presentations/assignment5/assignment5_devops_ci_cd.pdf), and [Jenkins screenshot evidence](output/presentations/assignment5/assets/)
 - Jenkins run evidence: successful build #10 is shown in the accompanying Jenkins Stage View screenshot.
