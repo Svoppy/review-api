@@ -20,3 +20,6 @@ data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+.jenkins_home/
+.jenkins_home.initialization-attempt/
+devops/jenkins/local-ci-source/
